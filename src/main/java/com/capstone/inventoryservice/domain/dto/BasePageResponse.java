@@ -1,4 +1,4 @@
-package com.capstone.inventoryservice.dto;
+package com.capstone.inventoryservice.domain.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

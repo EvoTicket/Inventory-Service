@@ -30,7 +30,7 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        default_schema: iam_service
+        default_schema: inventory_service
   servlet:
     multipart:
       max-file-size: 20MB

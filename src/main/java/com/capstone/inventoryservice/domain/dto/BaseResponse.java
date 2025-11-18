@@ -1,4 +1,4 @@
-package com.capstone.inventoryservice.dto;
+package com.capstone.inventoryservice.domain.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -18,6 +18,9 @@ public class BaseResponse<T> {
 
     public static <T> BaseResponse<T> ok(String message, T data) {
         return new BaseResponse<>(200, message, data);
+    }
+    public static <T> BaseResponse<T> ok(T data) {
+        return new BaseResponse<>(200, "Thành công", data);
     }
 
     public static <T> BaseResponse<T> created(String message, T data) {

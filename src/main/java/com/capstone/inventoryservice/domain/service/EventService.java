@@ -1,0 +1,255 @@
+package com.capstone.inventoryservice.domain.service;
+
+import com.capstone.inventoryservice.domain.client.IAMFeignClient;
+import com.capstone.inventoryservice.domain.client.OrgClientResponse;
+import com.capstone.inventoryservice.domain.dto.BasePageResponse;
+import com.capstone.inventoryservice.domain.dto.request.CreateEventRequest;
+import com.capstone.inventoryservice.domain.dto.request.CreateTicketTypeRequest;
+import com.capstone.inventoryservice.domain.dto.request.EventFilterRequest;
+import com.capstone.inventoryservice.domain.dto.request.UpdateEventRequest;
+import com.capstone.inventoryservice.domain.dto.response.EventResponse;
+import com.capstone.inventoryservice.domain.dto.response.ListEventResponse;
+import com.capstone.inventoryservice.domain.dto.response.TicketTypeResponse;
+import com.capstone.inventoryservice.model.entity.Event;
+import com.capstone.inventoryservice.model.entity.EventCategory;
+import com.capstone.inventoryservice.model.entity.TicketType;
+import com.capstone.inventoryservice.exception.AppException;
+import com.capstone.inventoryservice.exception.ErrorCode;
+import com.capstone.inventoryservice.domain.mapper.TicketTypeMapper;
+import com.capstone.inventoryservice.model.repository.EventCategoryRepository;
+import com.capstone.inventoryservice.model.repository.EventRepository;
+import com.capstone.inventoryservice.model.repository.TicketTypeRepository;
+import com.capstone.inventoryservice.security.JwtUtil;
+import com.capstone.inventoryservice.domain.specification.EventSpecification;
+import com.capstone.inventoryservice.domain.util.EventUtil;
+import com.capstone.inventoryservice.domain.util.LocationUtil;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class EventService {
+
+    private final EventRepository eventRepository;
+    private final EventCategoryRepository categoryRepository;
+    private final TicketTypeRepository ticketTypeRepository;
+    private final JwtUtil jwtUtil;
+    private final IAMFeignClient iamFeignClient;
+    private final LocationUtil locationUtil;
+    private final EventUtil eventUtil;
+    private final TicketTypeMapper ticketTypeMapper;
+
+    @Transactional(readOnly = true)
+    public BasePageResponse<ListEventResponse> getEvents(EventFilterRequest filter) {
+        Specification<Event> spec = EventSpecification.withFilters(filter);
+
+        Pageable pageable = buildPageable(filter);
+
+        Page<Event> eventPage = eventRepository.findAll(spec, pageable);
+
+        Page<ListEventResponse> dtoPage = eventPage.map(ListEventResponse::fromEntity);
+
+        return BasePageResponse.fromPage(dtoPage);
+    }
+
+    private Pageable buildPageable(EventFilterRequest filter) {
+        int page = filter.getPage() != null && filter.getPage() >= 0 ? filter.getPage() : 0;
+        int size = filter.getSize() != null && filter.getSize() > 0 && filter.getSize() <= 100
+                ? filter.getSize() : 20;
+
+        String sortBy = filter.getSortBy() != null ? filter.getSortBy() : "createdAt";
+        String sortDirection = filter.getSortDirection() != null ? filter.getSortDirection() : "DESC";
+
+        String sortField = mapSortField(sortBy);
+
+        Sort.Direction direction = "ASC".equalsIgnoreCase(sortDirection)
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+
+        Sort sort = Sort.by(direction, sortField);
+
+        return PageRequest.of(page, size, sort);
+    }
+
+    private String mapSortField(String sortBy) {
+        return switch (sortBy.toLowerCase()) {
+            case "startdatetime", "starttime", "start" -> "startDatetime";
+            case "enddatetime", "endtime", "end" -> "endDatetime";
+            case "totalseats", "seats" -> "totalSeats";
+            case "eventname", "name" -> "eventName";
+            case "createdat", "created" -> "createdAt";
+            case "updatedat", "updated" -> "updatedAt";
+            default -> "createdAt";
+        };
+    }
+
+    @Transactional(readOnly = true)
+    public EventResponse getEventById(Long eventId) {
+        Event event = eventUtil.getEventOrElseThrow(eventId);
+        return convertToDTO(event);
+    }
+
+    public EventResponse  createEvent(CreateEventRequest request) {
+        EventCategory category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Category not found with id: " + request.getCategoryId()));
+
+        if (request.getEndDatetime().isBefore(request.getStartDatetime())) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "End datetime must be after start datetime");
+        }
+
+        Long orgId = jwtUtil.getDataFromAuth().organizationId();
+        if(orgId == null) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Org id is null");
+        }
+
+        Event event = Event.builder()
+                .eventName(request.getEventName())
+                .description(request.getDescription())
+                .venue(request.getVenue())
+                .address(request.getAddress())
+                .startDatetime(request.getStartDatetime())
+                .endDatetime(request.getEndDatetime())
+                .eventStatus(request.getEventStatus())
+                .eventType(request.getEventType())
+                .bannerImage(request.getBannerImage())
+                .thumbnailImage(request.getThumbnailImage())
+                .totalSeats(request.getTotalSeats())
+                .organizerId(orgId)
+                .isFeatured(request.getIsFeatured() != null && request.getIsFeatured())
+                .category(category)
+                .province(locationUtil.getProvinceByCode(request.getProvinceCode()))
+                .ward(locationUtil.getWardByCode(request.getWardCode()))
+                .build();
+
+        Event savedEvent = eventRepository.save(event);
+
+        if (request.getTicketTypes() != null && !request.getTicketTypes().isEmpty()) {
+            for (CreateTicketTypeRequest ticketRequest : request.getTicketTypes()) {
+                TicketType ticketType = TicketType.builder()
+                        .typeName(ticketRequest.getTypeName())
+                        .description(ticketRequest.getDescription())
+                        .price(ticketRequest.getPrice())
+                        .takePlaceTime(ticketRequest.getTakePlaceTime())
+                        .quantityAvailable(ticketRequest.getQuantityAvailable())
+                        .quantitySold(0)
+                        .minPurchase(ticketRequest.getMinPurchase())
+                        .maxPurchase(ticketRequest.getMaxPurchase())
+                        .saleStartDate(ticketRequest.getSaleStartDate())
+                        .saleEndDate(ticketRequest.getSaleEndDate())
+                        .ticketTypeStatus(ticketRequest.getTicketTypeStatus())
+                        .event(savedEvent)
+                        .build();
+                ticketTypeRepository.save(ticketType);
+            }
+        }
+
+        return convertToDTO(eventRepository.findByIdWithTicketTypes(savedEvent.getId()).orElse(savedEvent));
+    }
+
+    @Transactional
+    public EventResponse updateEvent(Long eventId, UpdateEventRequest request) {
+        Event event = eventUtil.getEventOrElseThrow(eventId);
+
+        if (request.getEventName() != null) {
+            event.setEventName(request.getEventName());
+        }
+        if (request.getDescription() != null) {
+            event.setDescription(request.getDescription());
+        }
+        if (request.getVenue() != null) {
+            event.setVenue(request.getVenue());
+        }
+        if (request.getAddress() != null) {
+            event.setAddress(request.getAddress());
+        }
+        if (request.getStartDatetime() != null) {
+            event.setStartDatetime(request.getStartDatetime());
+        }
+        if (request.getEndDatetime() != null) {
+            if (request.getEndDatetime().isBefore(event.getStartDatetime())) {
+                throw new AppException(ErrorCode.BAD_REQUEST, "End datetime must be after start datetime");
+            }
+            event.setEndDatetime(request.getEndDatetime());
+        }
+        if (request.getEventStatus() != null) {
+            event.setEventStatus(request.getEventStatus());
+        }
+        if (request.getEventType() != null) {
+            event.setEventType(request.getEventType());
+        }
+        if (request.getBannerImage() != null) {
+            event.setBannerImage(request.getBannerImage());
+        }
+        if (request.getThumbnailImage() != null) {
+            event.setThumbnailImage(request.getThumbnailImage());
+        }
+        if (request.getTotalSeats() != null) {
+            event.setTotalSeats(request.getTotalSeats());
+        }
+        if (request.getIsFeatured() != null) {
+            event.setIsFeatured(request.getIsFeatured());
+        }
+        if (request.getCategoryId() != null) {
+            EventCategory category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Category not found with id: " + request.getCategoryId()));
+            event.setCategory(category);
+        }
+
+        Event updatedEvent = eventRepository.save(event);
+        log.info("Updated event with ID: {}", eventId);
+        return convertToDTO(updatedEvent);
+    }
+
+    @Transactional
+    public Boolean deleteEvent(Long eventId) {
+        Event event = eventUtil.getEventOrElseThrow(eventId);
+
+        eventRepository.delete(event);
+        return true;
+    }
+
+    private EventResponse convertToDTO(Event event) {
+        List<TicketTypeResponse> ticketTypeDTOs = null;
+        if (event.getTicketTypes() != null) {
+            ticketTypeDTOs = event.getTicketTypes().stream()
+                    .map(ticketTypeMapper::convertToDTO)
+                    .toList();
+        }
+
+        if(event.getOrganizerId() == null) {
+            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "OrganizerId is null");
+        }
+        OrgClientResponse orgClientResponse = iamFeignClient.getOrganizationById(event.getOrganizerId());
+
+        return EventResponse.builder()
+                .eventId(event.getId())
+                .eventName(event.getEventName())
+                .orgClientResponse(orgClientResponse)
+                .description(event.getDescription())
+                .venue(event.getVenue())
+                .address(event.getAddress())
+                .startDatetime(event.getStartDatetime())
+                .endDatetime(event.getEndDatetime())
+                .eventStatus(event.getEventStatus())
+                .eventType(event.getEventType())
+                .bannerImage(event.getBannerImage())
+                .thumbnailImage(event.getThumbnailImage())
+                .totalSeats(event.getTotalSeats())
+                .organizerId(event.getOrganizerId())
+                .isFeatured(event.getIsFeatured())
+                .categoryId(event.getCategory() != null ? event.getCategory().getId() : null)
+                .categoryName(event.getCategory() != null ? event.getCategory().getCategoryName() : null)
+                .ticketTypes(ticketTypeDTOs)
+                .build();
+    }
+}

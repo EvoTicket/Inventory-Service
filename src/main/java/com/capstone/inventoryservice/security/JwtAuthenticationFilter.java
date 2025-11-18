@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -25,9 +26,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
         if (request.getServletPath().contains("/api/auth")) {
@@ -47,15 +48,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             Claims claims = jwtService.extractAllClaims(jwt);
             String email = claims.getSubject();
-            List<String> roles = claims.get("roles", List.class);
 
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            List<?> rawRoles = claims.get("roles", List.class);
+            List<String> roles = rawRoles.stream()
+                    .map(Object::toString)
+                    .toList();
+
+            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null && !jwtService.isTokenExpired(jwt)) {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 email,
                                 null,
                                 roles.stream()
-                                        .map(SimpleGrantedAuthority::new)
+                                        .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
                                         .toList()
                         );
 

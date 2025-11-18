@@ -1,5 +1,7 @@
 package com.capstone.inventoryservice.security;
 
+import io.jsonwebtoken.Claims;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -8,14 +10,20 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class JwtUtil {
-    public TokenMetaData getDataFromAuth(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof Jwt jwt)) {
-            return null;
+    private final JwtService jwtService;
+    private final HttpServletRequest request;
+
+    public TokenMetaData getDataFromAuth() {
+        String token = null;
+        String header = request.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            token =header.substring(7);
         }
 
-        Long userId = jwt.getClaim("userId");
-        Boolean isOrganization = jwt.getClaim("isOrganization");
-        Long organizationId = jwt.getClaim("organizationId");
+        Claims claims = jwtService.extractAllClaims(token);
+        Long userId = claims.get("userId", Long.class);
+        Boolean isOrganization = claims.get("isOrganization", Boolean.class);
+        Long organizationId = claims.get("organizationId", Long.class);
 
         return new TokenMetaData(userId, isOrganization, organizationId);
     }
