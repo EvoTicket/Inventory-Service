@@ -30,5 +30,7 @@ public class EventResponse {
     private Boolean isFeatured;
     private Long categoryId;
     private String categoryName;
+    private Long latitude;
+    private Long longitude;
     private List<TicketTypeResponse> ticketTypes;
 }

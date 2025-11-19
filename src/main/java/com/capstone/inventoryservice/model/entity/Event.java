@@ -76,6 +76,10 @@ public class Event {
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<TicketType> ticketTypes;
 
+    private Long latitude;
+
+    private Long longitude;
+
     @Column(name = "created_at")
     private OffsetDateTime createdAt;
 

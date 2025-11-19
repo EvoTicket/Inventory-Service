@@ -1,4 +1,4 @@
-package com.capstone.inventoryservice.cloudinary;
+package com.capstone.inventoryservice.config;
 
 import com.cloudinary.Cloudinary;
 import org.springframework.beans.factory.annotation.Value;

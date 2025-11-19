@@ -18,10 +18,10 @@ public class UpdateEventRequest {
     private OffsetDateTime endDatetime;
     private EventStatus eventStatus;
     private EventType eventType;
-    private String bannerImage;
-    private String thumbnailImage;
     private Integer totalSeats;
     private Boolean isFeatured;
     private Long categoryId;
+    private Long latitude;
+    private Long longitude;
 }
 

@@ -42,14 +42,15 @@ public class CreateEventRequest {
     @NotNull(message = "Event type is required")
     private EventType eventType;
 
-    private String bannerImage;
-    private String thumbnailImage;
-
     @NotNull(message = "Total seats is required")
     @Min(value = 1, message = "Total seats must be at least 1")
     private Integer totalSeats;
 
     private Boolean isFeatured;
+
+    private Long latitude;
+
+    private Long longitude;
 
     @NotNull(message = "Category ID is required")
     private Long categoryId;

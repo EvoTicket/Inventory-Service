@@ -23,6 +23,7 @@ import com.capstone.inventoryservice.security.JwtUtil;
 import com.capstone.inventoryservice.domain.specification.EventSpecification;
 import com.capstone.inventoryservice.domain.util.EventUtil;
 import com.capstone.inventoryservice.domain.util.LocationUtil;
+import com.cloudinary.Cloudinary;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -32,8 +33,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -48,6 +54,7 @@ public class EventService {
     private final LocationUtil locationUtil;
     private final EventUtil eventUtil;
     private final TicketTypeMapper ticketTypeMapper;
+    private final Cloudinary cloudinary;
 
     @Transactional(readOnly = true)
     public BasePageResponse<ListEventResponse> getEvents(EventFilterRequest filter) {
@@ -121,14 +128,14 @@ public class EventService {
                 .endDatetime(request.getEndDatetime())
                 .eventStatus(request.getEventStatus())
                 .eventType(request.getEventType())
-                .bannerImage(request.getBannerImage())
-                .thumbnailImage(request.getThumbnailImage())
                 .totalSeats(request.getTotalSeats())
                 .organizerId(orgId)
                 .isFeatured(request.getIsFeatured() != null && request.getIsFeatured())
                 .category(category)
                 .province(locationUtil.getProvinceByCode(request.getProvinceCode()))
                 .ward(locationUtil.getWardByCode(request.getWardCode()))
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
                 .build();
 
         Event savedEvent = eventRepository.save(event);
@@ -187,12 +194,6 @@ public class EventService {
         if (request.getEventType() != null) {
             event.setEventType(request.getEventType());
         }
-        if (request.getBannerImage() != null) {
-            event.setBannerImage(request.getBannerImage());
-        }
-        if (request.getThumbnailImage() != null) {
-            event.setThumbnailImage(request.getThumbnailImage());
-        }
         if (request.getTotalSeats() != null) {
             event.setTotalSeats(request.getTotalSeats());
         }
@@ -203,6 +204,12 @@ public class EventService {
             EventCategory category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Category not found with id: " + request.getCategoryId()));
             event.setCategory(category);
+        }
+        if (request.getLatitude() != null) {
+            event.setLatitude(request.getLatitude());
+        }
+        if (request.getLongitude() != null) {
+            event.setLongitude(request.getLongitude());
         }
 
         Event updatedEvent = eventRepository.save(event);
@@ -216,6 +223,43 @@ public class EventService {
 
         eventRepository.delete(event);
         return true;
+    }
+
+    @Transactional
+    @SuppressWarnings("unchecked")
+    public String uploadEventImage(MultipartFile file, Long evenId, String type) {
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new IllegalArgumentException("File phải là ảnh");
+        }
+
+        String folder = "event/" + evenId + "/" + type + "/" ;
+
+        String publicId = UUID.randomUUID().toString();
+
+        Map<String, Object> options = new HashMap<>();
+        options.put("resource_type", "image");
+        options.put("folder",  folder);
+        options.put("public_id", publicId);
+        options.put("overwrite", true);
+
+        try {
+            Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), options);
+            Event event = eventUtil.getEventOrElseThrow(evenId);
+            switch (type) {
+                case "banner":
+                    event.setBannerImage(uploadResult.get("url").toString());
+                    break;
+                case "thumbnail":
+                    event.setThumbnailImage(uploadResult.get("url").toString());
+                    break;
+                default:
+                    break;
+            }
+            return uploadResult.get("url").toString();
+        } catch (IOException e) {
+            throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể tải ảnh lên Cloudinary: " + e.getMessage());
+        }
     }
 
     private EventResponse convertToDTO(Event event) {
@@ -249,6 +293,8 @@ public class EventService {
                 .isFeatured(event.getIsFeatured())
                 .categoryId(event.getCategory() != null ? event.getCategory().getId() : null)
                 .categoryName(event.getCategory() != null ? event.getCategory().getCategoryName() : null)
+                .latitude(event.getLatitude())
+                .longitude(event.getLongitude())
                 .ticketTypes(ticketTypeDTOs)
                 .build();
     }
