@@ -60,11 +60,16 @@ dependencies {
 
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-api:2.6.0")
+
+	implementation("org.springframework.ai:spring-ai-starter-model-google-genai:1.1.0-M1")
 }
 
 dependencyManagement {
 	imports {
 		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+	}
+	imports {
+		mavenBom "org.springframework.ai:spring-ai-bom:1.1.0-M1"
 	}
 }
 
