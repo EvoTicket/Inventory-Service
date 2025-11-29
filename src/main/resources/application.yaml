@@ -17,8 +17,8 @@ spring:
             temperature: 0.3
   datasource:
     url: ${DB_URL}
-    #    username: ${DB_USERNAME}
-    #    password: ${DB_PASSWORD}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 30000
@@ -49,7 +49,7 @@ cloudinary:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: https://server-discovery.onrender.com/eureka/
     fetch-registry: true
     register-with-eureka: true
   instance:
