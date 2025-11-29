@@ -85,6 +85,7 @@ public class TicketTypeService {
                 .build();
 
         TicketType savedTicketType = ticketTypeRepository.save(ticketType);
+        event.getTicketTypes().add(savedTicketType);
         return ticketTypeMapper.convertToDTO(savedTicketType);
     }
 

@@ -33,4 +33,5 @@ public class EventResponse {
     private Long latitude;
     private Long longitude;
     private List<TicketTypeResponse> ticketTypes;
+    private List<ReviewResponse> reviews;
 }

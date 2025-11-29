@@ -5,6 +5,7 @@ import com.capstone.inventoryservice.model.enums.EventType;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.OffsetDateTime;
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -74,7 +75,8 @@ public class Event {
     private EventCategory category;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<TicketType> ticketTypes;
+    @Builder.Default
+    private Set<TicketType> ticketTypes = new HashSet<>();
 
     private Long latitude;
 
@@ -85,6 +87,10 @@ public class Event {
 
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
+
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<Review> reviews = new HashSet<>();
 
     @PrePersist
     protected void onCreate() {

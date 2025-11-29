@@ -9,7 +9,9 @@ import com.capstone.inventoryservice.domain.dto.request.EventFilterRequest;
 import com.capstone.inventoryservice.domain.dto.request.UpdateEventRequest;
 import com.capstone.inventoryservice.domain.dto.response.EventResponse;
 import com.capstone.inventoryservice.domain.dto.response.ListEventResponse;
+import com.capstone.inventoryservice.domain.dto.response.ReviewResponse;
 import com.capstone.inventoryservice.domain.dto.response.TicketTypeResponse;
+import com.capstone.inventoryservice.domain.mapper.ReviewMapper;
 import com.capstone.inventoryservice.model.entity.Event;
 import com.capstone.inventoryservice.model.entity.EventCategory;
 import com.capstone.inventoryservice.model.entity.TicketType;
@@ -18,6 +20,7 @@ import com.capstone.inventoryservice.exception.ErrorCode;
 import com.capstone.inventoryservice.domain.mapper.TicketTypeMapper;
 import com.capstone.inventoryservice.model.repository.EventCategoryRepository;
 import com.capstone.inventoryservice.model.repository.EventRepository;
+import com.capstone.inventoryservice.model.repository.ReviewRepository;
 import com.capstone.inventoryservice.model.repository.TicketTypeRepository;
 import com.capstone.inventoryservice.security.JwtUtil;
 import com.capstone.inventoryservice.domain.specification.EventSpecification;
@@ -53,19 +56,8 @@ public class EventService {
     private final EventUtil eventUtil;
     private final TicketTypeMapper ticketTypeMapper;
     private final Cloudinary cloudinary;
-
-//    @Transactional(readOnly = true)
-//    public BasePageResponse<ListEventResponse> getEvents(EventFilterRequest filter) {
-//        Specification<Event> spec = EventSpecification.withFilters(filter);
-//
-//        Pageable pageable = buildPageable(filter);
-//
-//        Page<Event> eventPage = eventRepository.findAll(spec, pageable);
-//
-//        Page<ListEventResponse> dtoPage = eventPage.map(ListEventResponse::fromEntity);
-//
-//        return BasePageResponse.fromPage(dtoPage);
-//    }
+    private final ReviewRepository reviewRepository;
+    private final ReviewMapper reviewMapper;
 
     @Transactional(readOnly = true)
     public BasePageResponse<ListEventResponse> getEvents(EventFilterRequest filter) {
@@ -197,8 +189,6 @@ public class EventService {
                 .longitude(request.getLongitude())
                 .build();
 
-        Event savedEvent = eventRepository.save(event);
-
         if (request.getTicketTypes() != null && !request.getTicketTypes().isEmpty()) {
             for (CreateTicketTypeRequest ticketRequest : request.getTicketTypes()) {
                 TicketType ticketType = TicketType.builder()
@@ -213,11 +203,13 @@ public class EventService {
                         .saleStartDate(ticketRequest.getSaleStartDate())
                         .saleEndDate(ticketRequest.getSaleEndDate())
                         .ticketTypeStatus(ticketRequest.getTicketTypeStatus())
-                        .event(savedEvent)
+                        .event(event)
                         .build();
-                ticketTypeRepository.save(ticketType);
+
+                event.getTicketTypes().add(ticketType);
             }
         }
+        Event savedEvent = eventRepository.save(event);
 
         return convertToDTO(eventRepository.findByIdWithTicketTypes(savedEvent.getId()).orElse(savedEvent));
     }
@@ -328,6 +320,12 @@ public class EventService {
                     .map(ticketTypeMapper::convertToDTO)
                     .toList();
         }
+        List<ReviewResponse> reviewDTOs = null;
+        if (event.getReviews() != null) {
+            reviewDTOs = event.getReviews().stream()
+                    .map(reviewMapper::mapToResponse)
+                    .toList();
+        }
 
         if(event.getOrganizerId() == null) {
             throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "OrganizerId is null");
@@ -355,6 +353,7 @@ public class EventService {
                 .latitude(event.getLatitude())
                 .longitude(event.getLongitude())
                 .ticketTypes(ticketTypeDTOs)
+                .reviews(reviewDTOs)
                 .build();
     }
 }
