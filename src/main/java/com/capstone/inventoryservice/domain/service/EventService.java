@@ -36,10 +36,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -56,17 +54,78 @@ public class EventService {
     private final TicketTypeMapper ticketTypeMapper;
     private final Cloudinary cloudinary;
 
+//    @Transactional(readOnly = true)
+//    public BasePageResponse<ListEventResponse> getEvents(EventFilterRequest filter) {
+//        Specification<Event> spec = EventSpecification.withFilters(filter);
+//
+//        Pageable pageable = buildPageable(filter);
+//
+//        Page<Event> eventPage = eventRepository.findAll(spec, pageable);
+//
+//        Page<ListEventResponse> dtoPage = eventPage.map(ListEventResponse::fromEntity);
+//
+//        return BasePageResponse.fromPage(dtoPage);
+//    }
+
     @Transactional(readOnly = true)
     public BasePageResponse<ListEventResponse> getEvents(EventFilterRequest filter) {
         Specification<Event> spec = EventSpecification.withFilters(filter);
-
         Pageable pageable = buildPageable(filter);
-
         Page<Event> eventPage = eventRepository.findAll(spec, pageable);
 
-        Page<ListEventResponse> dtoPage = eventPage.map(ListEventResponse::fromEntity);
+        if (eventPage.isEmpty()) {
+            Page<ListEventResponse> emptyPage = Page.empty(pageable);
+            return BasePageResponse.fromPage(emptyPage);
+        }
+
+        List<Long> eventIds = eventPage.getContent().stream()
+                .map(Event::getId)
+                .toList();
+
+        Map<Long, Long> favoriteCountMap = getFavoriteCountMap(eventIds);
+
+        Long currentUserId = jwtUtil.getDataFromAuth().userId();
+        Set<Long> userFavoriteEventIds = currentUserId != null
+                ? getUserFavoriteEventIds(currentUserId, eventIds)
+                : Collections.emptySet();
+
+        Page<ListEventResponse> dtoPage = eventPage.map(event -> {
+            ListEventResponse dto = ListEventResponse.fromEntity(event);
+
+            Long favoriteCount = favoriteCountMap.getOrDefault(event.getId(), 0L);
+            dto.setFavoriteCount(favoriteCount);
+
+            boolean isFavorite = userFavoriteEventIds.contains(event.getId());
+            dto.setFavorite(isFavorite);
+
+            return dto;
+        });
 
         return BasePageResponse.fromPage(dtoPage);
+    }
+
+    private Map<Long, Long> getFavoriteCountMap(List<Long> eventIds) {
+        if (eventIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<Object[]> results = eventRepository.countFavoritesByEventIds(eventIds);
+
+        return results.stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (Long) row[1],
+                        (existing, replacement) -> existing
+                ));
+    }
+
+    private Set<Long> getUserFavoriteEventIds(Long userId, List<Long> eventIds) {
+        if (eventIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+
+        List<Long> favoriteIds = eventRepository.findFavoriteEventIdsByUserId(userId, eventIds);
+        return new HashSet<>(favoriteIds);
     }
 
     private Pageable buildPageable(EventFilterRequest filter) {

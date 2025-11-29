@@ -43,6 +43,9 @@ public class ListEventResponse {
 
     private Boolean isExpired;
 
+    private boolean isFavorite;
+    private Long favoriteCount;
+
     public static ListEventResponse fromEntity(Event event) {
         OffsetDateTime now = OffsetDateTime.now();
         boolean expired = event.getEndDatetime() != null && event.getEndDatetime().isBefore(now);
@@ -68,6 +71,8 @@ public class ListEventResponse {
                 .createdAt(event.getCreatedAt())
                 .updatedAt(event.getUpdatedAt())
                 .isExpired(expired)
+                .isFavorite(false)
+                .favoriteCount(0L)
                 .build();
     }
 }

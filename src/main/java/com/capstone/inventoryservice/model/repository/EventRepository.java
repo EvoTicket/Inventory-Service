@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,4 +29,17 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
 
     @Query("SELECT e FROM Event e LEFT JOIN FETCH e.ticketTypes WHERE e.id = :eventId")
     Optional<Event> findByIdWithTicketTypes(@Param("eventId") Long eventId);
+
+    @Query("SELECT ufe.event.id, COUNT(ufe.id) FROM UserFavoriteEvent ufe " +
+            "WHERE ufe.event.id IN :eventIds " +
+            "GROUP BY ufe.event.id")
+    List<Object[]> countFavoritesByEventIds(@Param("eventIds") List<Long> eventIds);
+
+    @Query("SELECT ufe.event.id FROM UserFavoriteEvent ufe " +
+            "WHERE ufe.userId = :userId AND ufe.event.id IN :eventIds")
+    List<Long> findFavoriteEventIdsByUserId(@Param("userId") Long userId,
+                                            @Param("eventIds") List<Long> eventIds);
+
+    List<Event> findByStartDatetimeAfter(OffsetDateTime dateTime);
+    List<Event> findByCategoryId(Long categoryId);
 }

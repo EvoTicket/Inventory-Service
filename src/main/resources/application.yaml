@@ -20,6 +20,11 @@ spring:
     #    username: ${DB_USERNAME}
     #    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 30000
+      max-lifetime: 1800000
+      maximum-pool-size: 10
+      minimum-idle: 5
   jpa:
     hibernate:
       ddl-auto: update
@@ -68,3 +73,11 @@ management:
   endpoint:
     health:
       show-details: always
+
+logging:
+  level:
+    org:
+      hibernate:
+        SQL: debug
+        type:
+          descriptor: trace

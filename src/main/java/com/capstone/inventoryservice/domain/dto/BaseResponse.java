@@ -26,6 +26,10 @@ public class BaseResponse<T> {
     public static <T> BaseResponse<T> created(String message, T data) {
         return new BaseResponse<>(201, message,  data);
     }
+    public static <T> BaseResponse<T> created(T data) {
+        return new BaseResponse<>(201, "Thành công",  data);
+    }
+
 
     public static <T> BaseResponse<T> noContent(String message) {
         return new BaseResponse<>(204, message, null);
