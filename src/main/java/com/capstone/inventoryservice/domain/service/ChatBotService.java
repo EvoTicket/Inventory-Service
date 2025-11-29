@@ -13,6 +13,7 @@ import com.capstone.inventoryservice.model.repository.UserFavoriteEventRepositor
 import com.capstone.inventoryservice.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
@@ -68,6 +69,7 @@ public class ChatBotService {
 
                 return chatClient
                         .prompt()
+                        .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, userId))
                         .system(formattedSystemPrompt)
                         .user(promptUserSpec -> promptUserSpec
                                 .media(media)
@@ -81,6 +83,7 @@ public class ChatBotService {
 
         return chatClient
                 .prompt()
+                .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, userId))
                 .system(formattedSystemPrompt)
                 .user(question)
                 .call()
