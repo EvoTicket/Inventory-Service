@@ -14,8 +14,6 @@ import com.capstone.inventoryservice.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.content.Media;
 import org.springframework.stereotype.Service;
@@ -36,8 +34,9 @@ public class ChatBotService {
     private final TicketTypeRepository ticketTypeRepository;
     private final UserFavoriteEventRepository userFavoriteEventRepository;
     private final JwtUtil jwtUtil;
+    private final ChatMessageService chatMessageService;
 
-    public String chatWithSmartQuery(String question, MultipartFile file) {
+    public String chatWithSmartQuery(String question, List<MultipartFile> images) {
         Long userId = jwtUtil.getDataFromAuth().userId();
 
         String queryType = determineQueryType(question);
@@ -58,36 +57,34 @@ public class ChatBotService {
         SystemPromptTemplate systemPromptTemplate = new SystemPromptTemplate(systemPrompt);
         String formattedSystemPrompt = systemPromptTemplate.createMessage(Map.of("context", contextData)).getText();
 
-        if (file != null && !file.isEmpty()) {
-            try {
-                String contentType = file.getContentType();
-                MimeType mimeType = contentType != null
-                        ? MimeTypeUtils.parseMimeType(contentType)
-                        : MimeTypeUtils.APPLICATION_OCTET_STREAM;
+        try {
+            String answer = chatClient
+                    .prompt()
+                    .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, userId))
+                    .system(formattedSystemPrompt)
+                    .user(user -> {
+                        user.text(question);
 
-                Media media = new Media(mimeType, file.getResource());
+                        if (images != null && !images.isEmpty()) {
+                            for (MultipartFile file : images) {
+                                String contentType = file.getContentType();
+                                MimeType mimeType = contentType != null
+                                        ? MimeTypeUtils.parseMimeType(contentType)
+                                        : MimeTypeUtils.APPLICATION_OCTET_STREAM;
 
-                return chatClient
-                        .prompt()
-                        .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, userId))
-                        .system(formattedSystemPrompt)
-                        .user(promptUserSpec -> promptUserSpec
-                                .media(media)
-                                .text(question))
-                        .call()
-                        .content();
-            } catch (Exception e) {
-                throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, e.getMessage());
-            }
+                                user.media(new Media(mimeType, file.getResource()));
+                            }
+                        }
+                    })
+                    .call()
+                    .content();
+            chatMessageService.saveUserMessage(userId, question, images);
+            chatMessageService.saveAssistantMessage(userId, answer);
+            return answer;
+
+        } catch (Exception e) {
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, e.getMessage());
         }
-
-        return chatClient
-                .prompt()
-                .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, userId))
-                .system(formattedSystemPrompt)
-                .user(question)
-                .call()
-                .content();
     }
 
     private String buildContextData(Long userId) {

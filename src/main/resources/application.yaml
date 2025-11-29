@@ -25,6 +25,7 @@ spring:
       max-lifetime: 1800000
       maximum-pool-size: 10
       minimum-idle: 5
+      schema: inventory_service
   jpa:
     hibernate:
       ddl-auto: update
