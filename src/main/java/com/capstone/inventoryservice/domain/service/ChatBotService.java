@@ -16,12 +16,21 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.content.Media;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.reader.tika.TikaDocumentReader;
+import org.springframework.ai.transformer.splitter.TextSplitter;
+import org.springframework.ai.transformer.splitter.TokenTextSplitter;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -35,6 +44,7 @@ public class ChatBotService {
     private final UserFavoriteEventRepository userFavoriteEventRepository;
     private final JwtUtil jwtUtil;
     private final ChatMessageService chatMessageService;
+    private final VectorStore vectorStore;
 
     public String chatWithSmartQuery(String question, List<MultipartFile> images) {
         Long userId = jwtUtil.getDataFromAuth().userId();
@@ -57,14 +67,16 @@ public class ChatBotService {
         SystemPromptTemplate systemPromptTemplate = new SystemPromptTemplate(systemPrompt);
         String formattedSystemPrompt = systemPromptTemplate.createMessage(Map.of("context", contextData)).getText();
 
+        if(images != null && !images.isEmpty()) ingest(question, images);
+
         try {
             String answer = chatClient
                     .prompt()
                     .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, userId))
+                    .advisors(new QuestionAnswerAdvisor(vectorStore))
                     .system(formattedSystemPrompt)
                     .user(user -> {
                         user.text(question);
-
                         if (images != null && !images.isEmpty()) {
                             for (MultipartFile file : images) {
                                 String contentType = file.getContentType();
@@ -264,5 +276,46 @@ public class ChatBotService {
                 category.getDescription(),
                 category.getEvents() != null ? category.getEvents().size() : 0
         );
+    }
+
+
+    private void ingest(String question, List<MultipartFile> files) {
+        try {
+            List<Document> allDocuments = new ArrayList<>();
+
+            TextSplitter splitter = new TokenTextSplitter();
+
+            for (MultipartFile file : files) {
+
+                Resource resource = new ByteArrayResource(file.getBytes()) {
+                    @Override
+                    public String getFilename() {
+                        return file.getOriginalFilename();
+                    }
+                };
+
+                TikaDocumentReader tikaDocumentReader = new TikaDocumentReader(resource);
+
+                List<Document> documents = splitter.split(tikaDocumentReader.read());
+
+                documents.forEach(d -> d.getMetadata().put("filename", resource.getFilename()));
+
+                allDocuments.addAll(documents);
+            }
+            if (question != null && !question.isBlank()) {
+                Document textDocument = new Document(question);
+
+                List<Document> textDocs = splitter.split(textDocument);
+
+                textDocs.forEach(d -> d.getMetadata().put("source", "question"));
+
+                allDocuments.addAll(textDocs);
+            }
+
+
+            vectorStore.accept(allDocuments);
+        } catch(Exception ex) {
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, ex.getMessage());
+        }
     }
 }

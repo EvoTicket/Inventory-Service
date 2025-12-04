@@ -36,7 +36,7 @@ public class ChatBotConfig {
                 - Do NOT mention that you are an AI model. Just act like the EvoTicket assistant.
                 - Use concise, easy-to-understand language.
                 
-                Đưa ra câu trả lời bằng tiếng việt
+                Đưa ra câu trả lời bằng tiếng việt, nếu người dùng hỏi những hỏi câu hỏi không liên quan tới hệ thống thì đừng trả lời
             """)
                 .build();
     }

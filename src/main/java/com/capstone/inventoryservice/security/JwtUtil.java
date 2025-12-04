@@ -3,8 +3,6 @@ package com.capstone.inventoryservice.security;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -26,5 +24,14 @@ public class JwtUtil {
         Long organizationId = claims.get("organizationId", Long.class);
 
         return new TokenMetaData(userId, isOrganization, organizationId);
+    }
+
+    public String getToken(){
+        String token = null;
+        String header = request.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            token =header.substring(7);
+        }
+        return token;
     }
 }

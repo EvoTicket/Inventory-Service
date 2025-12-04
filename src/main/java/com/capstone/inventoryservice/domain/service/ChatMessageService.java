@@ -77,11 +77,6 @@ public class ChatMessageService {
                 continue;
             }
 
-            String contentType = file.getContentType();
-            if (contentType == null || !contentType.startsWith("image/")) {
-                throw new IllegalArgumentException("Tất cả file phải là ảnh");
-            }
-
             String publicId = UUID.randomUUID().toString();
 
             Map<String, Object> options = new HashMap<>();
