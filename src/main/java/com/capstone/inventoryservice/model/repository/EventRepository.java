@@ -2,6 +2,8 @@ package com.capstone.inventoryservice.model.repository;
 
 import com.capstone.inventoryservice.model.entity.Event;
 import com.capstone.inventoryservice.model.enums.EventStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -42,4 +44,18 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
 
     List<Event> findByStartDatetimeAfter(OffsetDateTime dateTime);
     List<Event> findByCategoryId(Long categoryId);
+
+    @Query("SELECT DISTINCT e FROM Event e " +
+            "LEFT JOIN FETCH e.category " +
+            "LEFT JOIN FETCH e.ward " +
+            "LEFT JOIN FETCH e.province " +
+            "WHERE e.organizerId = :organizerId " +
+            "AND (:eventStatus IS NULL OR e.eventStatus = :eventStatus)")
+    Page<Event> findEventsByOrganizerIdAndStatus(
+            @Param("organizerId") Long organizerId,
+            @Param("eventStatus") EventStatus eventStatus,
+            Pageable pageable
+    );
+
+    Page<Event> findByOrganizerId(Long organizerId, Pageable pageable);
 }

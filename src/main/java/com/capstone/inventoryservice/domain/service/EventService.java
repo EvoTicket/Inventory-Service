@@ -18,6 +18,7 @@ import com.capstone.inventoryservice.model.entity.TicketType;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
 import com.capstone.inventoryservice.domain.mapper.TicketTypeMapper;
+import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.repository.EventCategoryRepository;
 import com.capstone.inventoryservice.model.repository.EventRepository;
 import com.capstone.inventoryservice.model.repository.ReviewRepository;
@@ -311,6 +312,27 @@ public class EventService {
         } catch (IOException e) {
             throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể tải ảnh lên Cloudinary: " + e.getMessage());
         }
+    }
+
+    @Transactional(readOnly = true)
+    public BasePageResponse<EventResponse> getEventsByOrganizer(
+            EventStatus eventStatus,
+            Pageable pageable
+    ) {
+        Long organizerId = jwtUtil.getDataFromAuth().organizationId();
+
+        Page<Event> eventPage;
+        if (eventStatus == null) {
+            eventPage = eventRepository.findByOrganizerId(organizerId, pageable);
+        } else {
+            eventPage = eventRepository.findEventsByOrganizerIdAndStatus(
+                    organizerId, eventStatus, pageable
+            );
+        }
+
+        Page<EventResponse> responsePage = eventPage.map(this::convertToDTO);
+
+        return BasePageResponse.fromPage(responsePage);
     }
 
     private EventResponse convertToDTO(Event event) {

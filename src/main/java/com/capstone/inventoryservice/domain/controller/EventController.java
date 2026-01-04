@@ -14,6 +14,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -128,5 +131,38 @@ public class EventController {
     public ResponseEntity<BaseResponse<Boolean>> deleteEvent(@PathVariable Long eventId) {
         return ResponseEntity
                 .ok(BaseResponse.ok("success", eventService.deleteEvent(eventId)));
+    }
+
+    @GetMapping("/my")
+    @Operation(summary = "Get events by organizer",
+            description = "Get paginated list of events filtered by organizer ID and optional status")
+    public ResponseEntity<BasePageResponse<EventResponse>> getEventsByOrganizer(
+
+            @Parameter(description = "Event status filter (optional)")
+            @RequestParam(required = false) EventStatus status,
+
+            @Parameter(description = "Page number (1-indexed)")
+            @RequestParam(defaultValue = "1") int page,
+
+            @Parameter(description = "Page size")
+            @RequestParam(defaultValue = "10") int size,
+
+            @Parameter(description = "Sort field")
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+
+            @Parameter(description = "Sort direction (ASC or DESC)")
+            @RequestParam(defaultValue = "DESC") String sortDirection
+    ) {
+        Sort.Direction direction = sortDirection.equalsIgnoreCase("ASC")
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(direction, sortBy));
+
+        BasePageResponse<EventResponse> response = eventService.getEventsByOrganizer(
+                 status, pageable
+        );
+
+        return ResponseEntity.ok(response);
     }
 }
