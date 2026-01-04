@@ -29,8 +29,16 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     List<Event> findUpcomingEventsByStatus(@Param("status") EventStatus status,
                                            @Param("currentDate") LocalDateTime currentDate);
 
-    @Query("SELECT e FROM Event e LEFT JOIN FETCH e.ticketTypes WHERE e.id = :eventId")
-    Optional<Event> findByIdWithTicketTypes(@Param("eventId") Long eventId);
+    @Query("""
+    SELECT DISTINCT e
+    FROM Event e
+    LEFT JOIN FETCH e.ticketTypes tt
+    LEFT JOIN FETCH e.reviews r
+    LEFT JOIN FETCH r.images
+    WHERE e.id = :eventId
+    """)
+    Optional<Event> findByIdWithDetails(@Param("eventId") Long eventId);
+
 
     @Query("SELECT ufe.event.id, COUNT(ufe.id) FROM UserFavoriteEvent ufe " +
             "WHERE ufe.event.id IN :eventIds " +
