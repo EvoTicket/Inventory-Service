@@ -5,7 +5,9 @@ import lombok.*;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "reviews")
@@ -36,7 +38,7 @@ public class Review {
     @ElementCollection
     @CollectionTable(name = "review_images", joinColumns = @JoinColumn(name = "review_id"))
     @Column(name = "image_url")
-    private List<String> images = new ArrayList<>();
+    private Set<String> images = new LinkedHashSet<>();
 
     @Column(name = "created_at")
     private OffsetDateTime createdAt;

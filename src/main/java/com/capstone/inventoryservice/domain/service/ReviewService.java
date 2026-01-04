@@ -38,9 +38,9 @@ public class ReviewService {
 
         Long userId = jwtUtil.getDataFromAuth().userId();
 
-        List<String> imagesStr;
+        Set<String> imagesStr;
         try {
-            imagesStr = uploadImages(images, userId, event.getId());
+            imagesStr = new HashSet<>(uploadImages(images, userId, event.getId()));
         }   catch (IOException e) {
             throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể tải ảnh lên Cloudinary: " + e.getMessage());
         }
@@ -74,9 +74,9 @@ public class ReviewService {
             review.setComment(request.getComment());
         }
 
-        List<String> imagesStr;
+        Set<String> imagesStr;
         try {
-            imagesStr = uploadImages(images, userId, review.getEvent().getId());
+            imagesStr = new HashSet<>(uploadImages(images, userId, review.getEvent().getId()));
         }   catch (IOException e) {
             throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể tải ảnh lên Cloudinary: " + e.getMessage());
         }
