@@ -4,6 +4,8 @@ import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
 import jakarta.validation.constraints.*;
 import lombok.*;
+
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -48,9 +50,9 @@ public class CreateEventRequest {
 
     private Boolean isFeatured;
 
-    private Long latitude;
+    private BigDecimal latitude;
 
-    private Long longitude;
+    private BigDecimal longitude;
 
     @NotNull(message = "Category ID is required")
     private Long categoryId;

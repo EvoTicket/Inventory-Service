@@ -5,6 +5,7 @@ import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -30,8 +31,8 @@ public class EventResponse {
     private Boolean isFeatured;
     private Long categoryId;
     private String categoryName;
-    private Long latitude;
-    private Long longitude;
+    private BigDecimal latitude;
+    private BigDecimal longitude;
     private List<TicketTypeResponse> ticketTypes;
     private List<ReviewResponse> reviews;
 }

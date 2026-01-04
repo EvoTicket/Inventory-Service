@@ -4,6 +4,8 @@ import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -78,9 +80,9 @@ public class Event {
     @Builder.Default
     private Set<TicketType> ticketTypes = new HashSet<>();
 
-    private Long latitude;
+    private BigDecimal latitude;
 
-    private Long longitude;
+    private BigDecimal longitude;
 
     @Column(name = "created_at")
     private OffsetDateTime createdAt;

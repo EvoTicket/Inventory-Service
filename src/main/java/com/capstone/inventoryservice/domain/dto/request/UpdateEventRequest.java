@@ -3,6 +3,8 @@ package com.capstone.inventoryservice.domain.dto.request;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
 import lombok.*;
+
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 @Getter @Setter
@@ -21,7 +23,7 @@ public class UpdateEventRequest {
     private Integer totalSeats;
     private Boolean isFeatured;
     private Long categoryId;
-    private Long latitude;
-    private Long longitude;
+    private BigDecimal latitude;
+    private BigDecimal longitude;
 }
 
