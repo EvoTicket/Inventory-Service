@@ -158,7 +158,7 @@ public class EventService {
         return convertToDTO(event);
     }
 
-    public EventResponse  createEvent(CreateEventRequest request) {
+    public EventResponse createEvent(CreateEventRequest request) {
         EventCategory category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Category not found with id: " + request.getCategoryId()));
 
@@ -212,7 +212,7 @@ public class EventService {
         }
         Event savedEvent = eventRepository.save(event);
 
-        return convertToDTO(eventRepository.findByIdWithTicketTypes(savedEvent.getId()).orElse(savedEvent));
+        return convertToDTO(eventRepository.findByIdWithDetails(savedEvent.getId()).orElse(savedEvent));
     }
 
     @Transactional
