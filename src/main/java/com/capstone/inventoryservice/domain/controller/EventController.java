@@ -136,7 +136,7 @@ public class EventController {
     @GetMapping("/my")
     @Operation(summary = "Get events by organizer",
             description = "Get paginated list of events filtered by organizer ID and optional status")
-    public ResponseEntity<BasePageResponse<EventResponse>> getEventsByOrganizer(
+    public ResponseEntity<BasePageResponse<ListEventResponse>> getEventsByOrganizer(
 
             @Parameter(description = "Event status filter (optional)")
             @RequestParam(required = false) EventStatus status,
@@ -159,7 +159,7 @@ public class EventController {
 
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by(direction, sortBy));
 
-        BasePageResponse<EventResponse> response = eventService.getEventsByOrganizer(
+        BasePageResponse<ListEventResponse> response = eventService.getEventsByOrganizer(
                  status, pageable
         );
 

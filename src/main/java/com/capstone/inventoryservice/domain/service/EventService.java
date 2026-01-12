@@ -64,37 +64,10 @@ public class EventService {
     public BasePageResponse<ListEventResponse> getEvents(EventFilterRequest filter) {
         Specification<Event> spec = EventSpecification.withFilters(filter);
         Pageable pageable = buildPageable(filter);
+
         Page<Event> eventPage = eventRepository.findAll(spec, pageable);
 
-        if (eventPage.isEmpty()) {
-            Page<ListEventResponse> emptyPage = Page.empty(pageable);
-            return BasePageResponse.fromPage(emptyPage);
-        }
-
-        List<Long> eventIds = eventPage.getContent().stream()
-                .map(Event::getId)
-                .toList();
-
-        Map<Long, Long> favoriteCountMap = getFavoriteCountMap(eventIds);
-
-        Long currentUserId = jwtUtil.getDataFromAuth().userId();
-        Set<Long> userFavoriteEventIds = currentUserId != null
-                ? getUserFavoriteEventIds(currentUserId, eventIds)
-                : Collections.emptySet();
-
-        Page<ListEventResponse> dtoPage = eventPage.map(event -> {
-            ListEventResponse dto = ListEventResponse.fromEntity(event);
-
-            Long favoriteCount = favoriteCountMap.getOrDefault(event.getId(), 0L);
-            dto.setFavoriteCount(favoriteCount);
-
-            boolean isFavorite = userFavoriteEventIds.contains(event.getId());
-            dto.setFavorite(isFavorite);
-
-            return dto;
-        });
-
-        return BasePageResponse.fromPage(dtoPage);
+        return buildEventPageResponse(eventPage, pageable);
     }
 
     private Map<Long, Long> getFavoriteCountMap(List<Long> eventIds) {
@@ -315,24 +288,19 @@ public class EventService {
     }
 
     @Transactional(readOnly = true)
-    public BasePageResponse<EventResponse> getEventsByOrganizer(
+    public BasePageResponse<ListEventResponse> getEventsByOrganizer(
             EventStatus eventStatus,
             Pageable pageable
     ) {
         Long organizerId = jwtUtil.getDataFromAuth().organizationId();
 
-        Page<Event> eventPage;
-        if (eventStatus == null) {
-            eventPage = eventRepository.findByOrganizerId(organizerId, pageable);
-        } else {
-            eventPage = eventRepository.findEventsByOrganizerIdAndStatus(
-                    organizerId, eventStatus, pageable
-            );
-        }
+        Page<Event> eventPage = (eventStatus == null)
+                ? eventRepository.findByOrganizerId(organizerId, pageable)
+                : eventRepository.findEventsByOrganizerIdAndStatus(
+                organizerId, eventStatus, pageable
+        );
 
-        Page<EventResponse> responsePage = eventPage.map(this::convertToDTO);
-
-        return BasePageResponse.fromPage(responsePage);
+        return buildEventPageResponse(eventPage, pageable);
     }
 
     private EventResponse convertToDTO(Event event) {
@@ -377,5 +345,31 @@ public class EventService {
                 .ticketTypes(ticketTypeDTOs)
                 .reviews(reviewDTOs)
                 .build();
+    }
+
+    private BasePageResponse<ListEventResponse> buildEventPageResponse(
+            Page<Event> eventPage,
+            Pageable pageable
+    ) {
+        if (eventPage.isEmpty()) {
+            return BasePageResponse.fromPage(Page.empty(pageable));
+        }
+
+        List<Long> eventIds = eventPage.getContent().stream()
+                .map(Event::getId)
+                .toList();
+
+        Map<Long, Long> favoriteCountMap = getFavoriteCountMap(eventIds);
+
+        Long currentUserId = jwtUtil.getDataFromAuth().userId();
+        Set<Long> userFavoriteEventIds = currentUserId != null
+                ? getUserFavoriteEventIds(currentUserId, eventIds)
+                : Collections.emptySet();
+
+        Page<ListEventResponse> dtoPage = eventPage.map(
+                event -> ListEventResponse.mapToResponse(event, favoriteCountMap, userFavoriteEventIds)
+        );
+
+        return BasePageResponse.fromPage(dtoPage);
     }
 }

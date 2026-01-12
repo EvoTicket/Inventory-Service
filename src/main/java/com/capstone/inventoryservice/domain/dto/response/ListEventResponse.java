@@ -9,6 +9,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -46,7 +49,7 @@ public class ListEventResponse {
     private boolean isFavorite;
     private Long favoriteCount;
 
-    public static ListEventResponse fromEntity(Event event) {
+    public static ListEventResponse mapToResponse(Event event, Map<Long, Long> favoriteCountMap,  Set<Long> userFavoriteEventIds) {
         OffsetDateTime now = OffsetDateTime.now();
         boolean expired = event.getEndDatetime() != null && event.getEndDatetime().isBefore(now);
 
@@ -71,8 +74,8 @@ public class ListEventResponse {
                 .createdAt(event.getCreatedAt())
                 .updatedAt(event.getUpdatedAt())
                 .isExpired(expired)
-                .isFavorite(false)
-                .favoriteCount(0L)
+                .isFavorite(userFavoriteEventIds.contains(event.getId()))
+                .favoriteCount(favoriteCountMap.getOrDefault(event.getId(), 0L))
                 .build();
     }
 }

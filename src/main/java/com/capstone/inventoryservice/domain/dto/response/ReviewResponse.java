@@ -14,6 +14,8 @@ public class ReviewResponse {
     private Long id;
     private Long eventId;
     private Long userId;
+    private String userFullName;
+    private String userAvatarUrl;
     private Integer rating;
     private String comment;
     private Set<String> images;

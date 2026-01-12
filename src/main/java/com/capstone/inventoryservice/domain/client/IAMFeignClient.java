@@ -13,4 +13,7 @@ public interface IAMFeignClient {
 
     @GetMapping("/client/organizations/{id}")
     OrgClientResponse getOrganizationById(@PathVariable("id") Long id);
+
+    @GetMapping("/client/users/{id}")
+    UserClientResponse getUserById(@PathVariable("id") Long id);
 }
