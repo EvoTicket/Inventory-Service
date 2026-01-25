@@ -22,6 +22,7 @@ public class TicketTypeMapper {
                 .saleEndDate(ticketType.getSaleEndDate())
                 .ticketTypeStatus(ticketType.getTicketTypeStatus())
                 .eventId(ticketType.getEvent().getId())
+                .eventName(ticketType.getEvent().getEventName())
                 .build();
     }
 }

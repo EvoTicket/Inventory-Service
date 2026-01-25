@@ -1,6 +1,6 @@
 package com.capstone.inventoryservice.domain.dto.response;
 
-import com.capstone.inventoryservice.domain.client.OrgClientResponse;
+import com.capstone.inventoryservice.domain.client.OrgInternalResponse;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
 import lombok.*;
@@ -16,7 +16,7 @@ import java.util.List;
 public class EventResponse {
     private Long eventId;
     private String eventName;
-    private OrgClientResponse orgClientResponse;
+    private OrgInternalResponse orgInternalResponse;
     private String description;
     private String venue;
     private String address;

@@ -1,7 +1,7 @@
 package com.capstone.inventoryservice.domain.mapper;
 
 import com.capstone.inventoryservice.domain.client.IAMFeignClient;
-import com.capstone.inventoryservice.domain.client.UserClientResponse;
+import com.capstone.inventoryservice.domain.client.UserInternalResponse;
 import com.capstone.inventoryservice.domain.dto.response.ReviewResponse;
 import com.capstone.inventoryservice.model.entity.Review;
 import lombok.RequiredArgsConstructor;
@@ -17,11 +17,11 @@ public class ReviewMapper {
     public ReviewResponse mapToResponse(Review review) {
         String fullName = Optional
                 .ofNullable(iamFeignClient.getUserById(review.getUserId()))
-                .map(UserClientResponse::getUserFullName)
+                .map(UserInternalResponse::getUserFullName)
                 .orElse(null);
         String avatarUrl = Optional
                 .ofNullable(iamFeignClient.getUserById(review.getUserId()))
-                .map(UserClientResponse::getUserAvatarUrl)
+                .map(UserInternalResponse::getUserAvatarUrl)
                 .orElse(null);
         return ReviewResponse.builder()
                 .id(review.getId())

@@ -23,4 +23,5 @@ public class TicketTypeResponse {
     private OffsetDateTime saleEndDate;
     private TicketTypeStatus ticketTypeStatus;
     private Long eventId;
+    private String eventName;
 }

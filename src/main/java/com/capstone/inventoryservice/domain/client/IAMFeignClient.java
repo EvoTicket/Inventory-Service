@@ -7,13 +7,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 @FeignClient(
         name = "iam-service",
+        path = "/api/external",
         configuration = FeignClientConfig.class
 )
 public interface IAMFeignClient {
 
-    @GetMapping("/client/organizations/{id}")
-    OrgClientResponse getOrganizationById(@PathVariable("id") Long id);
+    @GetMapping("/organizations/{id}")
+    OrgInternalResponse getOrganizationById(@PathVariable("id") Long id);
 
-    @GetMapping("/client/users/{id}")
-    UserClientResponse getUserById(@PathVariable("id") Long id);
+    @GetMapping("/users/{id}")
+    UserInternalResponse getUserById(@PathVariable("id") Long id);
 }

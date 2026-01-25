@@ -1,7 +1,7 @@
 package com.capstone.inventoryservice.domain.service;
 
 import com.capstone.inventoryservice.domain.client.IAMFeignClient;
-import com.capstone.inventoryservice.domain.client.OrgClientResponse;
+import com.capstone.inventoryservice.domain.client.OrgInternalResponse;
 import com.capstone.inventoryservice.domain.dto.BasePageResponse;
 import com.capstone.inventoryservice.domain.dto.request.CreateEventRequest;
 import com.capstone.inventoryservice.domain.dto.request.CreateTicketTypeRequest;
@@ -320,12 +320,12 @@ public class EventService {
         if(event.getOrganizerId() == null) {
             throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "OrganizerId is null");
         }
-        OrgClientResponse orgClientResponse = iamFeignClient.getOrganizationById(event.getOrganizerId());
+        OrgInternalResponse orgInternalResponse = iamFeignClient.getOrganizationById(event.getOrganizerId());
 
         return EventResponse.builder()
                 .eventId(event.getId())
                 .eventName(event.getEventName())
-                .orgClientResponse(orgClientResponse)
+                .orgInternalResponse(orgInternalResponse)
                 .description(event.getDescription())
                 .venue(event.getVenue())
                 .address(event.getAddress())

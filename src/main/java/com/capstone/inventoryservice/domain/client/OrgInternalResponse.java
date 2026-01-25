@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrgClientResponse {
+public class OrgInternalResponse {
     private Long id;
     private String organizationName;
     private String logoUrl;

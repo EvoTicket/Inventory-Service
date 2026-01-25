@@ -1,7 +1,9 @@
 package com.capstone.inventoryservice.domain.service;
 
 import com.capstone.inventoryservice.domain.dto.request.CreateTicketTypeRequest;
+import com.capstone.inventoryservice.domain.dto.request.OrderItemRequest;
 import com.capstone.inventoryservice.domain.dto.request.UpdateTicketTypeRequest;
+import com.capstone.inventoryservice.domain.client.ListTicketTypesInternalResponse;
 import com.capstone.inventoryservice.domain.dto.response.TicketTypeResponse;
 import com.capstone.inventoryservice.model.entity.Event;
 import com.capstone.inventoryservice.model.entity.TicketType;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -40,6 +43,55 @@ public class TicketTypeService {
     public TicketTypeResponse getTicketTypeById(Long ticketTypeId) {
         TicketType ticketType = ticketTypeUtil.getTicketTypeOrElseThrow(ticketTypeId);
         return ticketTypeMapper.convertToDTO(ticketType);
+    }
+
+    @Transactional(readOnly = true)
+    public ListTicketTypesInternalResponse getTicketTypes(List<OrderItemRequest> listItems) {
+        if (listItems == null || listItems.isEmpty()) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Danh sách ticket không được rỗng");
+        }
+
+        List<ListTicketTypesInternalResponse.TicketDetailResponse> ticketDetails = new ArrayList<>();
+        Long eventId = null;
+        String eventName = null;
+
+        for (OrderItemRequest item : listItems) {
+
+            TicketType ticket = ticketTypeRepository
+                    .findAvailableTicket(item.getTicketTypeId(), item.getQuantity())
+                    .orElseThrow(() ->
+                            new AppException(
+                                    ErrorCode.BAD_REQUEST,
+                                    "Ticket không đủ số lượng: " + item.getTicketTypeId()
+                            )
+                    );
+
+            if (eventId == null) {
+                eventId = ticket.getEvent().getId();
+                eventName = ticket.getEvent().getEventName();
+            } else if (!eventId.equals(ticket.getEvent().getId())) {
+                throw new AppException(
+                        ErrorCode.BAD_REQUEST,
+                        "Các ticket phải thuộc cùng một sự kiện"
+                );
+            }
+
+            ListTicketTypesInternalResponse.TicketDetailResponse detail =
+                    ListTicketTypesInternalResponse.TicketDetailResponse.builder()
+                            .ticketTypeId(ticket.getId())
+                            .ticketTypeName(ticket.getTypeName())
+                            .quantity(item.getQuantity().longValue())
+                            .price(ticket.getPrice())
+                            .build();
+
+            ticketDetails.add(detail);
+        }
+
+        return ListTicketTypesInternalResponse.builder()
+                .eventId(eventId)
+                .eventName(eventName)
+                .ticketDetails(ticketDetails)
+                .build();
     }
 
     @Transactional(readOnly = true)
