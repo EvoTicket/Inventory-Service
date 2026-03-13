@@ -26,9 +26,9 @@ public class CreateTicketTypeRequest {
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
     private BigDecimal price;
 
-    @NotNull(message = "Quantity available is required")
+    @NotNull(message = "Quantity total is required")
     @Min(value = 1, message = "Quantity must be at least 1")
-    private Integer quantityAvailable;
+    private Integer quantityTotal;
 
     @Min(value = 1, message = "Min purchase must be at least 1")
     private Integer minPurchase;

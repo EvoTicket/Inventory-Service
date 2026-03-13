@@ -26,17 +26,17 @@ public interface TicketTypeRepository extends JpaRepository<TicketType, Long> {
     @Query("SELECT t FROM TicketType t WHERE t.saleStartDate <= :currentDate AND t.saleEndDate >= :currentDate")
     List<TicketType> findActiveTicketTypes(@Param("currentDate") LocalDateTime currentDate);
 
-    @Modifying
-    @Query("UPDATE TicketType t SET t.quantitySold = t.quantitySold + :quantity WHERE t.id = :ticketTypeId")
-    int incrementQuantitySold(@Param("ticketTypeId") Long ticketTypeId,
-                              @Param("quantity") Integer quantity);
 
-    @Modifying
-    @Query("UPDATE TicketType t SET t.quantityAvailable = t.quantityAvailable - :quantity WHERE t.id = :ticketTypeId")
-    int decrementQuantityAvailable(@Param("ticketTypeId") Long ticketTypeId,
-                                   @Param("quantity") Integer quantity);
-
-    @Query("SELECT t FROM TicketType t WHERE t.id = :ticketTypeId AND t.quantityAvailable >= :requestedQuantity")
+    @Query("SELECT t FROM TicketType t WHERE t.id = :ticketTypeId AND t.quantityTotal >= :requestedQuantity")
     Optional<TicketType> findAvailableTicket(@Param("ticketTypeId") Long ticketTypeId,
                                              @Param("requestedQuantity") Integer requestedQuantity);
+
+    @Modifying
+    @Query("""
+    UPDATE TicketType t
+    SET t.quantitySold = t.quantitySold + :qty
+    WHERE t.id = :id
+    AND (t.quantityTotal - t.quantitySold) >= :qty
+    """)
+    int increaseSold(Long id, long qty);
 }

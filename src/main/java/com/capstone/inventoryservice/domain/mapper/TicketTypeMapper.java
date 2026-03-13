@@ -14,7 +14,7 @@ public class TicketTypeMapper {
                 .description(ticketType.getDescription())
                 .price(ticketType.getPrice())
                 .takePlaceTime(ticketType.getTakePlaceTime())
-                .quantityAvailable(ticketType.getQuantityAvailable())
+                .quantityAvailable(ticketType.getQuantityTotal())
                 .quantitySold(ticketType.getQuantitySold())
                 .minPurchase(ticketType.getMinPurchase())
                 .maxPurchase(ticketType.getMaxPurchase())

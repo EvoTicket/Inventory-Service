@@ -43,6 +43,16 @@ spring:
 #        index-type: NONE
         max-document-batch-size: 10000
         schema-name: inventory_service
+  data:
+    redis:
+      url: ${REDIS_URL}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}

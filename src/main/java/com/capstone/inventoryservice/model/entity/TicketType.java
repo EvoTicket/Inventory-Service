@@ -31,8 +31,8 @@ public class TicketType {
     @Column(name = "take_place_time")
     private OffsetDateTime takePlaceTime;
 
-    @Column(name = "quantity_available", nullable = false)
-    private Integer quantityAvailable;
+    @Column(name = "quantity_total", nullable = false)
+    private Integer quantityTotal;
 
     @Column(name = "quantity_sold")
     private Integer quantitySold;

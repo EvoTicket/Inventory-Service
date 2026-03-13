@@ -3,6 +3,7 @@ package com.capstone.inventoryservice.domain.service;
 import com.capstone.inventoryservice.domain.client.IAMFeignClient;
 import com.capstone.inventoryservice.domain.client.OrgInternalResponse;
 import com.capstone.inventoryservice.domain.dto.BasePageResponse;
+import com.capstone.inventoryservice.domain.dto.event.TicketCreatedEvent;
 import com.capstone.inventoryservice.domain.dto.request.CreateEventRequest;
 import com.capstone.inventoryservice.domain.dto.request.CreateTicketTypeRequest;
 import com.capstone.inventoryservice.domain.dto.request.EventFilterRequest;
@@ -21,7 +22,6 @@ import com.capstone.inventoryservice.domain.mapper.TicketTypeMapper;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.repository.EventCategoryRepository;
 import com.capstone.inventoryservice.model.repository.EventRepository;
-import com.capstone.inventoryservice.model.repository.ReviewRepository;
 import com.capstone.inventoryservice.model.repository.TicketTypeRepository;
 import com.capstone.inventoryservice.security.JwtUtil;
 import com.capstone.inventoryservice.domain.specification.EventSpecification;
@@ -30,6 +30,7 @@ import com.capstone.inventoryservice.domain.util.LocationUtil;
 import com.cloudinary.Cloudinary;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -57,7 +58,7 @@ public class EventService {
     private final EventUtil eventUtil;
     private final TicketTypeMapper ticketTypeMapper;
     private final Cloudinary cloudinary;
-    private final ReviewRepository reviewRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final ReviewMapper reviewMapper;
 
     @Transactional(readOnly = true)
@@ -170,7 +171,7 @@ public class EventService {
                         .description(ticketRequest.getDescription())
                         .price(ticketRequest.getPrice())
                         .takePlaceTime(ticketRequest.getTakePlaceTime())
-                        .quantityAvailable(ticketRequest.getQuantityAvailable())
+                        .quantityTotal(ticketRequest.getQuantityTotal())
                         .quantitySold(0)
                         .minPurchase(ticketRequest.getMinPurchase())
                         .maxPurchase(ticketRequest.getMaxPurchase())
@@ -181,6 +182,13 @@ public class EventService {
                         .build();
 
                 event.getTicketTypes().add(ticketType);
+
+                eventPublisher.publishEvent(
+                        new TicketCreatedEvent(
+                                ticketType.getId(),
+                                ticketType.getQuantityTotal()
+                        )
+                );
             }
         }
         Event savedEvent = eventRepository.save(event);

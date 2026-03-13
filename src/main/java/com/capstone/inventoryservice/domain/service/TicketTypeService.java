@@ -126,7 +126,7 @@ public class TicketTypeService {
                 .description(request.getDescription())
                 .price(request.getPrice())
                 .takePlaceTime(request.getTakePlaceTime())
-                .quantityAvailable(request.getQuantityAvailable())
+                .quantityTotal(request.getQuantityTotal())
                 .quantitySold(0)
                 .minPurchase(request.getMinPurchase())
                 .maxPurchase(request.getMaxPurchase())
@@ -158,7 +158,7 @@ public class TicketTypeService {
             ticketType.setTakePlaceTime(request.getTakePlaceTime());
         }
         if (request.getQuantityAvailable() != null) {
-            ticketType.setQuantityAvailable(request.getQuantityAvailable());
+            ticketType.setQuantityTotal(request.getQuantityAvailable());
         }
         if (request.getMinPurchase() != null) {
             ticketType.setMinPurchase(request.getMinPurchase());
