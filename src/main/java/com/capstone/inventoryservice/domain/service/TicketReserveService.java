@@ -1,5 +1,6 @@
 package com.capstone.inventoryservice.domain.service;
 
+import com.capstone.inventoryservice.domain.dto.event.CommitTicketEvent;
 import com.capstone.inventoryservice.domain.dto.event.OrderPaidEvent;
 import com.capstone.inventoryservice.domain.dto.request.OrderItemRequest;
 import com.capstone.inventoryservice.exception.AppException;
@@ -59,6 +60,7 @@ public class TicketReserveService {
 
     @Transactional
     public void  commitTickets(OrderPaidEvent event) {
+        CommitTicketEvent commitTicketEvent = new CommitTicketEvent(event.getOrderCode());
         try {
             for (OrderItemRequest item : event.getItems()) {
 
@@ -79,10 +81,10 @@ public class TicketReserveService {
                         item.getQuantity()
                 );
             }
-            redisStreamProducer.sendMessage("commit-ticket-success",  event.getOrderCode());
+            redisStreamProducer.sendMessage("commit-ticket-success", commitTicketEvent);
         } catch (Exception e) {
             log.error("Commit tickets failed for order {}", e.getMessage());
-            redisStreamProducer.sendMessage("commit-ticket-failed", event.getOrderCode());
+            redisStreamProducer.sendMessage("commit-ticket-failed", commitTicketEvent);
             throw e;
         }
     }
