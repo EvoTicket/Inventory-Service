@@ -3,7 +3,7 @@ package com.capstone.inventoryservice.domain.dto.response;
 import com.capstone.inventoryservice.model.enums.TicketTypeStatus;
 import lombok.*;
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 
 @Getter @Setter
 @NoArgsConstructor
@@ -14,13 +14,13 @@ public class TicketTypeResponse {
     private String typeName;
     private String description;
     private BigDecimal price;
-    private OffsetDateTime takePlaceTime;
+    private LocalDateTime takePlaceTime;
     private Integer quantityAvailable;
     private Integer quantitySold;
     private Integer minPurchase;
     private Integer maxPurchase;
-    private OffsetDateTime saleStartDate;
-    private OffsetDateTime saleEndDate;
+    private LocalDateTime saleStartDate;
+    private LocalDateTime saleEndDate;
     private TicketTypeStatus ticketTypeStatus;
     private Long eventId;
     private String eventName;

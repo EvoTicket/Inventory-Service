@@ -14,7 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -38,7 +38,7 @@ public class UserFavoriteEventService {
         UserFavoriteEvent userFavoriteEvent = new UserFavoriteEvent();
         userFavoriteEvent.setUserId(userId);
         userFavoriteEvent.setEvent(event);
-        userFavoriteEvent.setLikedAt(OffsetDateTime.now(ZoneOffset.ofHours(7)));
+        userFavoriteEvent.setLikedAt(LocalDateTime.now());
 
         UserFavoriteEvent saved = userFavoriteEventRepository.save(userFavoriteEvent);
 

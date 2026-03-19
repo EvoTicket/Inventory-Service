@@ -4,13 +4,14 @@ import com.capstone.inventoryservice.domain.dto.BaseResponse;
 import com.capstone.inventoryservice.domain.dto.request.OrderItemRequest;
 import com.capstone.inventoryservice.domain.service.TicketReserveService;
 import com.capstone.inventoryservice.domain.service.TicketTypeService;
+import com.capstone.inventoryservice.exception.AppException;
+import com.capstone.inventoryservice.exception.ErrorCode;
+import com.capstone.inventoryservice.model.entity.Event;
+import com.capstone.inventoryservice.model.repository.EventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -21,6 +22,8 @@ import java.util.List;
 public class InternalController {
     private final TicketTypeService ticketTypeService;
     private final TicketReserveService ticketReserveService;
+    private final EventRepository eventRepository;
+    private final IAMFeignClient iamFeignClient;
 
     @PostMapping("/ticket-types/tickets")
     public ResponseEntity<BaseResponse<ListTicketTypesInternalResponse>> getTicketTypes(
@@ -54,5 +57,14 @@ public class InternalController {
             );
         }
         return ResponseEntity.ok(BaseResponse.ok(true));
+    }
+
+    @GetMapping("/event/{eventId}")
+    public ResponseEntity<BaseResponse<EventDetailResponse>> getEventDetails(Long eventId){
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "event not found"));
+        String organizerName = iamFeignClient.getOrganizationById(event.getOrganizerId()).getOrganizationName();
+        EventDetailResponse eventDetailResponse = EventDetailResponse.toDto(event, organizerName);
+        return ResponseEntity.ok(BaseResponse.ok(eventDetailResponse));
     }
 }

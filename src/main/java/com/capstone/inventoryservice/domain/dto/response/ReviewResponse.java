@@ -2,7 +2,7 @@ package com.capstone.inventoryservice.domain.dto.response;
 
 import lombok.*;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Getter
@@ -19,6 +19,6 @@ public class ReviewResponse {
     private Integer rating;
     private String comment;
     private Set<String> images;
-    private OffsetDateTime createdAt;
-    private OffsetDateTime updatedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

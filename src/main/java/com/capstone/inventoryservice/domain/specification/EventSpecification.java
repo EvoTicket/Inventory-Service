@@ -5,7 +5,7 @@ import com.capstone.inventoryservice.model.entity.Event;
 import jakarta.persistence.criteria.*;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,18 +52,18 @@ public class EventSpecification {
             }
 
             if (filter.getStartDate() != null) {
-                OffsetDateTime startOfDay = filter.getStartDate().atStartOfDay().atOffset(ZoneOffset.ofHours(7));
+                LocalDateTime startOfDay = filter.getStartDate().atStartOfDay();
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), startOfDay));
             }
 
             if (filter.getEndDate() != null) {
-                OffsetDateTime endOfDay = filter.getEndDate().plusDays(1).atStartOfDay().atOffset(ZoneOffset.ofHours(7));
+                LocalDateTime endOfDay = filter.getEndDate().plusDays(1).atStartOfDay();
                 predicates.add(criteriaBuilder.lessThan(root.get("createdAt"), endOfDay));
             }
 
             if (filter.getEventDate() != null) {
-                OffsetDateTime startOfDay = filter.getEventDate().atStartOfDay().atOffset(ZoneOffset.ofHours(7));
-                OffsetDateTime endOfDay = filter.getEventDate().plusDays(1).atStartOfDay().atOffset(ZoneOffset.ofHours(7));
+                LocalDateTime startOfDay = filter.getEventDate().atStartOfDay();
+                LocalDateTime endOfDay = filter.getEventDate().plusDays(1).atStartOfDay();
 
                 Predicate startBeforeOrEqual = criteriaBuilder.lessThanOrEqualTo(
                         root.get("startDatetime"), endOfDay
@@ -83,7 +83,7 @@ public class EventSpecification {
             }
 
             if (filter.getIncludeExpired() != null && !filter.getIncludeExpired()) {
-                OffsetDateTime now = OffsetDateTime.now();
+                LocalDateTime now = LocalDateTime.now();
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("endDatetime"), now));
             }
 

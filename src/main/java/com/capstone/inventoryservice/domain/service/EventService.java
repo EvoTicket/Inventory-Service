@@ -336,7 +336,7 @@ public class EventService {
                 .orgInternalResponse(orgInternalResponse)
                 .description(event.getDescription())
                 .venue(event.getVenue())
-                .address(event.getAddress())
+                .address(event.getFullAddress())
                 .startDatetime(event.getStartDatetime())
                 .endDatetime(event.getEndDatetime())
                 .eventStatus(event.getEventStatus())

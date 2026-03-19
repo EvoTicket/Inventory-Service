@@ -29,7 +29,7 @@ import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -159,7 +159,7 @@ public class ChatBotService {
         context.append(String.format("- Total Ticket Types: %d%n", ticketTypes.size()));
 
         long upcomingEvents = events.stream()
-                .filter(e -> e.getStartDatetime() != null && e.getStartDatetime().isAfter(OffsetDateTime.now()))
+                .filter(e -> e.getStartDatetime() != null && e.getStartDatetime().isAfter(LocalDateTime.now()))
                 .count();
         context.append(String.format("- Upcoming Events: %d%n", upcomingEvents));
 
@@ -211,7 +211,7 @@ public class ChatBotService {
                 break;
 
             case "UPCOMING_EVENTS":
-                List<Event> upcomingEvents = eventRepository.findByStartDatetimeAfter(OffsetDateTime.now());
+                List<Event> upcomingEvents = eventRepository.findByStartDatetimeAfter(LocalDateTime.now());
                 context.append("UPCOMING EVENTS:\n");
                 upcomingEvents.forEach(e -> context.append(formatEventInfo(e)));
                 break;

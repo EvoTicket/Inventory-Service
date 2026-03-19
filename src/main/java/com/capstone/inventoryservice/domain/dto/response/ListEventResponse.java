@@ -8,8 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.OffsetDateTime;
-import java.util.List;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
 
@@ -25,8 +24,8 @@ public class ListEventResponse {
 
     private String fullAddress;
 
-    private OffsetDateTime startDatetime;
-    private OffsetDateTime endDatetime;
+    private LocalDateTime startDatetime;
+    private LocalDateTime endDatetime;
     private EventStatus eventStatus;
     private EventType eventType;
 
@@ -41,8 +40,8 @@ public class ListEventResponse {
     private String categoryName;
     private String categoryIconUrl;
 
-    private OffsetDateTime createdAt;
-    private OffsetDateTime updatedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     private Boolean isExpired;
 
@@ -50,7 +49,7 @@ public class ListEventResponse {
     private Long favoriteCount;
 
     public static ListEventResponse mapToResponse(Event event, Map<Long, Long> favoriteCountMap,  Set<Long> userFavoriteEventIds) {
-        OffsetDateTime now = OffsetDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
         boolean expired = event.getEndDatetime() != null && event.getEndDatetime().isBefore(now);
 
         return ListEventResponse.builder()

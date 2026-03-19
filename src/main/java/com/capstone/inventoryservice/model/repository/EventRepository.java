@@ -11,7 +11,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,7 +49,7 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     List<Long> findFavoriteEventIdsByUserId(@Param("userId") Long userId,
                                             @Param("eventIds") List<Long> eventIds);
 
-    List<Event> findByStartDatetimeAfter(OffsetDateTime dateTime);
+    List<Event> findByStartDatetimeAfter(LocalDateTime dateTime);
     List<Event> findByCategoryId(Long categoryId);
 
     @Query("SELECT DISTINCT e FROM Event e " +

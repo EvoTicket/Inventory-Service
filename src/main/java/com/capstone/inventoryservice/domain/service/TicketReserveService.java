@@ -5,6 +5,7 @@ import com.capstone.inventoryservice.domain.dto.request.OrderItemRequest;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
 import com.capstone.inventoryservice.model.repository.TicketTypeRepository;
+import com.capstone.inventoryservice.producer.RedisStreamProducer;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,7 @@ public class TicketReserveService {
     private final StringRedisTemplate stringRedisTemplate;
     private final DefaultRedisScript<Long> reserveScript;
     private final TicketRedisInitializer ticketRedisInitializer;
+    private final RedisStreamProducer redisStreamProducer;
 
     public void reserveOrThrow(Long ticketTypeId, long qty) {
         String availableKey = "ticket:available:" + ticketTypeId;
@@ -56,26 +58,32 @@ public class TicketReserveService {
     }
 
     @Transactional
-    public void commitTickets(OrderPaidEvent event) {
+    public void  commitTickets(OrderPaidEvent event) {
+        try {
+            for (OrderItemRequest item : event.getItems()) {
 
-        for (OrderItemRequest item : event.getItems()) {
+                int updated = ticketTypeRepository.increaseSold(
+                        item.getTicketTypeId(),
+                        item.getQuantity()
+                );
 
-            int updated = ticketTypeRepository.increaseSold(
-                            item.getTicketTypeId(),
-                            item.getQuantity()
+                if (updated == 0) {
+                    throw new AppException(
+                            ErrorCode.CONFLICT,
+                            "Commit thất bại ticket " + item.getTicketTypeId()
                     );
+                }
 
-            if (updated == 0) {
-                throw new AppException(
-                        ErrorCode.CONFLICT,
-                        "Commit thất bại ticket " + item.getTicketTypeId()
+                stringRedisTemplate.opsForValue().decrement(
+                        "ticket:reserved:" + item.getTicketTypeId(),
+                        item.getQuantity()
                 );
             }
-
-            stringRedisTemplate.opsForValue().decrement(
-                    "ticket:reserved:" + item.getTicketTypeId(),
-                    item.getQuantity()
-            );
+            redisStreamProducer.sendMessage("commit-ticket-success",  event.getOrderCode());
+        } catch (Exception e) {
+            log.error("Commit tickets failed for order {}", e.getMessage());
+            redisStreamProducer.sendMessage("commit-ticket-failed", event.getOrderCode());
+            throw e;
         }
     }
 }

@@ -6,7 +6,7 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter @Setter
@@ -33,10 +33,10 @@ public class CreateEventRequest {
 
     @NotNull(message = "Start datetime is required")
     @Future(message = "Start datetime must be in the future")
-    private OffsetDateTime startDatetime;
+    private LocalDateTime startDatetime;
 
     @NotNull(message = "End datetime is required")
-    private OffsetDateTime endDatetime;
+    private LocalDateTime endDatetime;
 
     @NotNull(message = "Event status is required")
     private EventStatus eventStatus;

@@ -3,7 +3,7 @@ package com.capstone.inventoryservice.model.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user_favorite_event")
@@ -25,5 +25,5 @@ public class UserFavoriteEvent {
     private Event event;
 
     @Column(name = "liked_at")
-    private OffsetDateTime likedAt;
+    private LocalDateTime likedAt;
 }

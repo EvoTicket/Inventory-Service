@@ -2,7 +2,7 @@ package com.capstone.inventoryservice.domain.dto.response;
 
 import lombok.*;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -15,5 +15,5 @@ public class ChatMessageResponse {
     private String message;
     private List<String> images;
     private String senderType;
-    private OffsetDateTime createdAt;
+    private LocalDateTime createdAt;
 }

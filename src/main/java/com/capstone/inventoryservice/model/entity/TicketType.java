@@ -4,7 +4,7 @@ import com.capstone.inventoryservice.model.enums.TicketTypeStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "ticket_types")
@@ -29,7 +29,7 @@ public class TicketType {
     private BigDecimal price;
 
     @Column(name = "take_place_time")
-    private OffsetDateTime takePlaceTime;
+    private LocalDateTime takePlaceTime;
 
     @Column(name = "quantity_total", nullable = false)
     private Integer quantityTotal;
@@ -44,10 +44,10 @@ public class TicketType {
     private Integer maxPurchase;
 
     @Column(name = "sale_start_date")
-    private OffsetDateTime saleStartDate;
+    private LocalDateTime saleStartDate;
 
     @Column(name = "sale_end_date")
-    private OffsetDateTime saleEndDate;
+    private LocalDateTime saleEndDate;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "ticket_type_status")
@@ -58,15 +58,15 @@ public class TicketType {
     private Event event;
 
     @Column(name = "created_at")
-    private OffsetDateTime createdAt;
+    private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
-    private OffsetDateTime updatedAt;
+    private LocalDateTime updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        createdAt = OffsetDateTime.now();
-        updatedAt = OffsetDateTime.now();
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
         if (quantitySold == null) {
             quantitySold = 0;
         }
@@ -74,6 +74,6 @@ public class TicketType {
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = OffsetDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 }

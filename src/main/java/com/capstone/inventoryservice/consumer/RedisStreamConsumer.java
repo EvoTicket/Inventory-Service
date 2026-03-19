@@ -4,6 +4,7 @@ import com.capstone.inventoryservice.domain.dto.event.OrderPaidEvent;
 import com.capstone.inventoryservice.domain.service.TicketReserveService;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
+import com.capstone.inventoryservice.producer.RedisStreamProducer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -31,6 +32,7 @@ public class RedisStreamConsumer implements StreamListener<String, MapRecord<Str
     private final StreamMessageListenerContainer<String, MapRecord<String, String, String>> listenerContainer;
     private final RedisTemplate<String, Object> redisTemplate;
     private final TicketReserveService ticketReserveService;
+    private final RedisStreamProducer redisStreamProducer;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final List<String> LIST_STREAM_KEY = List.of(
             "order-paid"

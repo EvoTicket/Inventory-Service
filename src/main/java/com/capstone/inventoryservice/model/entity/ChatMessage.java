@@ -3,7 +3,7 @@ package com.capstone.inventoryservice.model.entity;
 import com.capstone.inventoryservice.model.enums.SenderType;
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +32,7 @@ public class ChatMessage {
     private SenderType senderType;
 
     @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt;
+    private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "chatMessage", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -41,7 +41,7 @@ public class ChatMessage {
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {
-            createdAt = OffsetDateTime.now(ZoneId.systemDefault());
+            createdAt = LocalDateTime.now(ZoneId.systemDefault());
         }
     }
 }

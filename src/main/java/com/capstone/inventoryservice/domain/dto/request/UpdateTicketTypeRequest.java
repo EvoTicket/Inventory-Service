@@ -3,7 +3,7 @@ package com.capstone.inventoryservice.domain.dto.request;
 import com.capstone.inventoryservice.model.enums.TicketTypeStatus;
 import lombok.*;
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 
 @Getter @Setter
 @NoArgsConstructor
@@ -13,11 +13,11 @@ public class UpdateTicketTypeRequest {
     private String typeName;
     private String description;
     private BigDecimal price;
-    private OffsetDateTime takePlaceTime;
+    private LocalDateTime takePlaceTime;
     private Integer quantityAvailable;
     private Integer minPurchase;
     private Integer maxPurchase;
-    private OffsetDateTime saleStartDate;
-    private OffsetDateTime saleEndDate;
+    private LocalDateTime saleStartDate;
+    private LocalDateTime saleEndDate;
     private TicketTypeStatus ticketTypeStatus;
 }

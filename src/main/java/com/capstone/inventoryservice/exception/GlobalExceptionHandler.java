@@ -15,7 +15,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 
 import java.io.IOException;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = ex.getErrorCode();
 
         ErrorResponse error = ErrorResponse.builder()
-                .timestamp(OffsetDateTime.now(ZoneOffset.ofHours(7)))
+                .timestamp(LocalDateTime.now())
                 .status(errorCode.getStatus().value())
                 .error(errorCode.getStatus().getReasonPhrase())
                 .code(errorCode.getCode())
@@ -44,7 +44,7 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = ErrorCode.BAD_CREDENTIALS;
 
         ErrorResponse error = ErrorResponse.builder()
-                .timestamp(OffsetDateTime.now(ZoneOffset.ofHours(7)))
+                .timestamp(LocalDateTime.now())
                 .status(errorCode.getStatus().value())
                 .error(errorCode.getStatus().getReasonPhrase())
                 .code(errorCode.getCode())
@@ -70,7 +70,7 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = ErrorCode.VALIDATION_FAILED;
 
         ValidationErrorResponse errorResponse = ValidationErrorResponse.builder()
-                .timestamp(OffsetDateTime.now(ZoneOffset.ofHours(7)))
+                .timestamp(LocalDateTime.now())
                 .status(errorCode.getStatus().value())
                 .error(errorCode.getStatus().getReasonPhrase())
                 .code(errorCode.getCode())
@@ -87,7 +87,7 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
 
         ErrorResponse error = ErrorResponse.builder()
-                .timestamp(OffsetDateTime.now(ZoneOffset.ofHours(7)))
+                .timestamp(LocalDateTime.now())
                 .status(errorCode.getStatus().value())
                 .error(errorCode.getStatus().getReasonPhrase())
                 .code(errorCode.getCode())
@@ -103,7 +103,7 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = ErrorCode.IO_EXCEPTION;
 
         ErrorResponse error = ErrorResponse.builder()
-                .timestamp(OffsetDateTime.now(ZoneOffset.ofHours(7)))
+                .timestamp(LocalDateTime.now())
                 .status(errorCode.getStatus().value())
                 .error(errorCode.getStatus().getReasonPhrase())
                 .code(errorCode.getCode())
@@ -119,7 +119,7 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = ErrorCode.MAX_UPLOAD_SIZE_EXCEEDED;
 
         ErrorResponse error = ErrorResponse.builder()
-                .timestamp(OffsetDateTime.now(ZoneOffset.ofHours(7)))
+                .timestamp(LocalDateTime.now())
                 .status(errorCode.getStatus().value())
                 .error(errorCode.getStatus().getReasonPhrase())
                 .code(errorCode.getCode())
@@ -135,7 +135,7 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = ErrorCode.METHOD_NOT_ALLOWED;
 
         ErrorResponse error = ErrorResponse.builder()
-                .timestamp(OffsetDateTime.now(ZoneOffset.ofHours(7)))
+                .timestamp(LocalDateTime.now())
                 .status(errorCode.getStatus().value())
                 .error(errorCode.getStatus().getReasonPhrase())
                 .code(errorCode.getCode())
@@ -151,7 +151,7 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = ErrorCode.MISSING_PARAM;
 
         ErrorResponse error = ErrorResponse.builder()
-                .timestamp(OffsetDateTime.now(ZoneOffset.ofHours(7)))
+                .timestamp(LocalDateTime.now())
                 .status(errorCode.getStatus().value())
                 .error(errorCode.getStatus().getReasonPhrase())
                 .code(errorCode.getCode())
@@ -167,7 +167,7 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = ErrorCode.DATA_INTEGRITY_VIOLATION;
 
         ErrorResponse error = ErrorResponse.builder()
-                .timestamp(OffsetDateTime.now(ZoneOffset.ofHours(7)))
+                .timestamp(LocalDateTime.now())
                 .status(errorCode.getStatus().value())
                 .error(errorCode.getStatus().getReasonPhrase())
                 .code(errorCode.getCode())
@@ -183,7 +183,7 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = ErrorCode.BAD_JSON;
 
         ErrorResponse error = ErrorResponse.builder()
-                .timestamp(OffsetDateTime.now(ZoneOffset.ofHours(7)))
+                .timestamp(LocalDateTime.now())
                 .status(errorCode.getStatus().value())
                 .error(errorCode.getStatus().getReasonPhrase())
                 .code(errorCode.getCode())
@@ -199,7 +199,7 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = ErrorCode.FILE_UPLOAD_ERROR;
 
         ErrorResponse error = ErrorResponse.builder()
-                .timestamp(OffsetDateTime.now(ZoneOffset.ofHours(7)))
+                .timestamp(LocalDateTime.now())
                 .status(errorCode.getStatus().value())
                 .error(errorCode.getStatus().getReasonPhrase())
                 .code(errorCode.getCode())

@@ -4,7 +4,7 @@ import com.capstone.inventoryservice.model.enums.TicketTypeStatus;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 
 @Getter @Setter
 @NoArgsConstructor
@@ -20,7 +20,7 @@ public class CreateTicketTypeRequest {
 
     private String description;
 
-    private OffsetDateTime takePlaceTime;
+    private LocalDateTime takePlaceTime;
 
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
@@ -36,8 +36,8 @@ public class CreateTicketTypeRequest {
     @Min(value = 1, message = "Max purchase must be at least 1")
     private Integer maxPurchase;
 
-    private OffsetDateTime saleStartDate;
-    private OffsetDateTime saleEndDate;
+    private LocalDateTime saleStartDate;
+    private LocalDateTime saleEndDate;
 
     @NotNull(message = "Ticket type status is required")
     private TicketTypeStatus ticketTypeStatus;

@@ -6,7 +6,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -44,10 +45,10 @@ public class Event {
     private Province province;
 
     @Column(name = "start_datetime")
-    private OffsetDateTime startDatetime;
+    private LocalDateTime startDatetime;
 
     @Column(name = "end_datetime")
-    private OffsetDateTime endDatetime;
+    private LocalDateTime endDatetime;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "event_status")
@@ -85,10 +86,10 @@ public class Event {
     private BigDecimal longitude;
 
     @Column(name = "created_at")
-    private OffsetDateTime createdAt;
+    private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
-    private OffsetDateTime updatedAt;
+    private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -96,13 +97,13 @@ public class Event {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = OffsetDateTime.now();
-        updatedAt = OffsetDateTime.now();
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = OffsetDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
     public String getFullAddress() {

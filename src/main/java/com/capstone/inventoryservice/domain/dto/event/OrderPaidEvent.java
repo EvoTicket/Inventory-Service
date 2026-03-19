@@ -13,5 +13,6 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class OrderPaidEvent {
+    private String orderCode;
     private List<OrderItemRequest> items;
 }

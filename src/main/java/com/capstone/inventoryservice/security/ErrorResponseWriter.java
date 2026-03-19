@@ -9,8 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.LocalDateTime;
 
 @Component
 public class ErrorResponseWriter {
@@ -29,7 +28,7 @@ public class ErrorResponseWriter {
         response.setStatus(errorCode.getStatus().value());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(OffsetDateTime.now(ZoneOffset.ofHours(7)))
+                .timestamp(LocalDateTime.now())
                 .status(errorCode.getStatus().value())
                 .error(errorCode.getStatus().getReasonPhrase())
                 .code(errorCode.getCode())

@@ -2,7 +2,7 @@ package com.capstone.inventoryservice.domain.dto.response;
 
 import lombok.*;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -14,7 +14,7 @@ public class UserFavoriteEventResponse {
     private Long eventId;
     private String eventName;
     private String eventDescription;
-    private OffsetDateTime eventStartDate;
-    private OffsetDateTime eventEndDate;
-    private OffsetDateTime likedAt;
+    private LocalDateTime eventStartDate;
+    private LocalDateTime eventEndDate;
+    private LocalDateTime likedAt;
 }

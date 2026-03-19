@@ -6,7 +6,7 @@ import com.capstone.inventoryservice.model.enums.EventType;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter @Setter
@@ -20,8 +20,8 @@ public class EventResponse {
     private String description;
     private String venue;
     private String address;
-    private OffsetDateTime startDatetime;
-    private OffsetDateTime endDatetime;
+    private LocalDateTime startDatetime;
+    private LocalDateTime endDatetime;
     private EventStatus eventStatus;
     private EventType eventType;
     private String bannerImage;
