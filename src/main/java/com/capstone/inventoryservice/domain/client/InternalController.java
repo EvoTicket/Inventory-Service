@@ -60,7 +60,7 @@ public class InternalController {
     }
 
     @GetMapping("/event/{eventId}")
-    public ResponseEntity<BaseResponse<EventDetailResponse>> getEventDetails(Long eventId){
+    public ResponseEntity<BaseResponse<EventDetailResponse>> getEventDetails(@PathVariable Long eventId){
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "event not found"));
         String organizerName = iamFeignClient.getOrganizationById(event.getOrganizerId()).getOrganizationName();
