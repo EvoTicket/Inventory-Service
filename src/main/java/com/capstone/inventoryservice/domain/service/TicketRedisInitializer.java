@@ -23,7 +23,7 @@ public class TicketRedisInitializer {
     public void onTicketCreated(TicketCreatedEvent e) {
 
         String availableKey = "ticket:available:" + e.getTicketTypeId();
-        String reservedKey  = "ticket:reserved:" + e.getTicketTypeId();
+        String reservedKey = "ticket:reserved:" + e.getTicketTypeId();
 
         stringRedisTemplate.opsForValue().set(
                 availableKey,
@@ -54,7 +54,7 @@ public class TicketRedisInitializer {
         long available = ticket.getQuantityTotal() - ticket.getQuantitySold();
 
         String availableKey = "ticket:available:" + ticketTypeId;
-        String reservedKey  = "ticket:reserved:" + ticketTypeId;
+        String reservedKey = "ticket:reserved:" + ticketTypeId;
 
         if (stringRedisTemplate.hasKey(availableKey)) {
             return;
