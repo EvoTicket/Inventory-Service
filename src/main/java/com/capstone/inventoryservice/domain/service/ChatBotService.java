@@ -12,6 +12,7 @@ import com.capstone.inventoryservice.model.repository.TicketTypeRepository;
 import com.capstone.inventoryservice.model.repository.UserFavoriteEventRepository;
 import com.capstone.inventoryservice.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
@@ -27,13 +28,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChatBotService {
@@ -73,7 +74,6 @@ public class ChatBotService {
             String answer = chatClient
                     .prompt()
                     .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, userId))
-                    .advisors(new QuestionAnswerAdvisor(vectorStore))
                     .system(formattedSystemPrompt)
                     .user(user -> {
                         user.text(question);
@@ -95,6 +95,7 @@ public class ChatBotService {
             return answer;
 
         } catch (Exception e) {
+            log.error("Error while calling AI", e);
             throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }

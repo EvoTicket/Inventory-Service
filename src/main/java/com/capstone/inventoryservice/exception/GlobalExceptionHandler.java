@@ -1,6 +1,7 @@
 package com.capstone.inventoryservice.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -20,6 +21,7 @@ import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -35,6 +37,8 @@ public class GlobalExceptionHandler {
                 .message(ex.getCustomMessage() != null ? ex.getCustomMessage() : errorCode.getDefaultMessage())
                 .path(request.getRequestURI())
                 .build();
+
+        log.error("AppException occurred: code={}, message={}, path={}", error.getCode(), error.getMessage(), error.getPath(), ex);
 
         return new ResponseEntity<>(error, errorCode.getStatus());
     }
@@ -94,6 +98,8 @@ public class GlobalExceptionHandler {
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
+
+        log.error("AppException occurred: code={}, message={}, path={}", error.getCode(), error.getMessage(), error.getPath(), ex);
 
         return new ResponseEntity<>(error, errorCode.getStatus());
     }

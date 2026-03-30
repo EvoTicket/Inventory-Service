@@ -11,7 +11,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class ChatMessageResponse {
-    private Long id;
+    private String id;
     private String message;
     private List<String> images;
     private String senderType;

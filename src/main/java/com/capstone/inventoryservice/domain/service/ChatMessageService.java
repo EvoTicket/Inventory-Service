@@ -10,10 +10,9 @@ import com.capstone.inventoryservice.model.repository.ChatMessageRepository;
 import com.capstone.inventoryservice.security.JwtUtil;
 import com.cloudinary.Cloudinary;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.util.*;
 
@@ -25,35 +24,35 @@ public class ChatMessageService {
     private final Cloudinary cloudinary;
     private final JwtUtil jwtUtil;
 
-    @Transactional
+    @Async
     public void saveUserMessage(Long userId,
                                 String message,
                                 List<MultipartFile> images) {
         List<String> imagesStr;
         try {
             imagesStr = uploadImages(images, userId);
-        } catch (IOException ex){
+        } catch (IOException ex) {
             throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể tải ảnh lên Cloudinary: " + ex.getMessage());
         }
-        ChatMessage chatMessage = ChatMessage.builder()
-                .userId(userId)
-                .message(message)
-                .senderType(SenderType.USER)
-                .build();
 
+        List<ChatMessageMedia> mediaList = new ArrayList<>();
         if (imagesStr != null && !imagesStr.isEmpty()) {
             for (String url : imagesStr) {
-                ChatMessageMedia media = ChatMessageMedia.builder()
-                        .chatMessage(chatMessage)
-                        .url(url)
-                        .build();
-                chatMessage.getMediaList().add(media);
+                mediaList.add(ChatMessageMedia.builder().url(url).build());
             }
         }
-        chatMessageRepository.save(chatMessage);
+
+        chatMessageRepository.save(
+                ChatMessage.builder()
+                        .userId(userId)
+                        .message(message)
+                        .senderType(SenderType.USER)
+                        .mediaList(mediaList)
+                        .build()
+        );
     }
 
-    @Transactional
+    @Async
     public void saveAssistantMessage(Long userId,
                                      String message) {
         chatMessageRepository.save(ChatMessage.builder()
