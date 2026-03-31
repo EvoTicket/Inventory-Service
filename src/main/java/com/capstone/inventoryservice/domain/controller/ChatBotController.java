@@ -32,7 +32,7 @@ public class ChatBotController {
             )
             @RequestParam(value = "files", required = false) List<MultipartFile> files
     ) {
-        String answer = chatBotService.chatWithSmartQuery(question, files);
+        String answer = chatBotService.chat(question, files);
         BaseResponse<ChatBotResponse> response = BaseResponse.ok(
                 ChatBotResponse.builder()
                 .answer(answer)

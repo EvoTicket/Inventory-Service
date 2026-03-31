@@ -13,17 +13,32 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.mongodb.atlas.MongoDBAtlasVectorStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
 @Configuration
 public class ChatBotConfig {
+
+    static final String SYSTEM_PROMPT = """
+            Bạn là trợ lý AI của EvoTicket — nền tảng mua bán vé sự kiện trực tuyến.
+            Nhiệm vụ của bạn là hỗ trợ người dùng tìm kiếm sự kiện, xem giá vé, lịch diễn và chính sách vé.
+
+            Quy tắc:
+            - Trả lời bằng tiếng Việt, thân thiện và chuyên nghiệp.
+            - Chỉ trả lời những câu hỏi liên quan đến sự kiện, vé, EvoTicket.
+            - Nếu câu hỏi không liên quan, lịch sự từ chối và hướng dẫn lại.
+            - Không bịa đặt thông tin. Chỉ dùng dữ liệu được cung cấp trong context.
+            - Dùng danh sách, bullet point khi liệt kê nhiều mục để dễ đọc.
+            - Không tự nhận mình là AI model — hành xử như nhân viên hỗ trợ EvoTicket.
+            """;
+
     @Bean
     public VectorStore vectorStore(MongoTemplate mongoTemplate, EmbeddingModel embeddingModel) {
         return MongoDBAtlasVectorStore.builder(mongoTemplate, embeddingModel)
                 .collectionName("vector-store")
                 .vectorIndexName("vector-index")
                 .pathName("embedding")
-                .numCandidates(500)
+                .numCandidates(200)
                 .initializeSchema(true)
                 .batchingStrategy(new TokenCountBatchingStrategy())
                 .build();
@@ -38,34 +53,30 @@ public class ChatBotConfig {
     }
 
     @Bean
-    public ChatClient chatClient(ChatClient.Builder builder, ChatMemory chatMemory, VectorStore vectorStore) {
+    @Primary
+    public ChatClient chatClient(ChatClient.Builder builder, ChatMemory chatMemory) {
+        return builder
+                .defaultAdvisors(
+                        MessageChatMemoryAdvisor.builder(chatMemory).build()
+                )
+                .defaultSystem(SYSTEM_PROMPT)
+                .build();
+    }
+
+    @Bean("ragChatClient")
+    public ChatClient ragChatClient(ChatClient.Builder builder, ChatMemory chatMemory, VectorStore vectorStore) {
         return builder
                 .defaultAdvisors(
                         MessageChatMemoryAdvisor.builder(chatMemory).build(),
                         QuestionAnswerAdvisor.builder(vectorStore)
                                 .searchRequest(
                                         SearchRequest.builder()
-                                                .similarityThreshold(0.5)
-                                                .topK(5)
+                                                .similarityThreshold(0.6)
+                                                .topK(4)
                                                 .build())
                                 .build()
                 )
-                .defaultSystem("""
-                             You are EvoTicket's AI assistant.
-                             Your role is to support users with everything related to browsing, searching, and purchasing event tickets \
-                             such as concerts, festivals, workshops, exhibitions, and entertainment shows.
-                        
-                             Guidelines:
-                             - Answer clearly, friendly, and professionally.
-                             - Provide helpful information about events, ticket types, prices, venues, schedules, and policies.
-                             - If a user asks about something not related to events or EvoTicket, politely guide them back to supported topics.
-                             - Never invent fake event details. Only provide information based on user input or data given through context.
-                             - Help users with steps like searching events, viewing seat maps, checking availability, or understanding ticket terms.
-                             - Do NOT mention that you are an AI model. Just act like the EvoTicket assistant.
-                             - Use concise, easy-to-understand language.
-                            \s
-                             Đưa ra câu trả lời bằng tiếng việt, nếu người dùng hỏi những hỏi câu hỏi không liên quan tới hệ thống thì đừng trả lời
-                        \s""")
+                .defaultSystem(SYSTEM_PROMPT)
                 .build();
     }
 }
