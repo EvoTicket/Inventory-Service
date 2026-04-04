@@ -6,9 +6,13 @@ import com.capstone.inventoryservice.domain.dto.request.CreateEventRequest;
 import com.capstone.inventoryservice.domain.dto.request.EventFilterRequest;
 import com.capstone.inventoryservice.domain.dto.request.UpdateEventRequest;
 import com.capstone.inventoryservice.domain.dto.response.EventResponse;
+import com.capstone.inventoryservice.domain.dto.response.HomepageResponse;
 import com.capstone.inventoryservice.domain.dto.response.ListEventResponse;
+import com.capstone.inventoryservice.domain.dto.response.TrendingEventResponse;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
+import com.capstone.inventoryservice.model.enums.EventCategory;
+import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
 import com.capstone.inventoryservice.domain.service.EventService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -39,8 +43,8 @@ public class EventController {
             @Parameter(description = "Search keyword (event name, description, venue)")
             @RequestParam(required = false) String keyword,
 
-            @Parameter(description = "Filter by multiple category IDs")
-            @RequestParam(required = false) List<Long> categoryIds,
+            @Parameter(description = "Filter by multiple categories")
+            @RequestParam(required = false) List<EventCategory> categories,
 
             @Parameter(description = "Filter by multiple event types")
             @RequestParam(required = false) List<EventType> eventTypes,
@@ -63,11 +67,14 @@ public class EventController {
             @Parameter(description = "Filter events happening on specific date (YYYY-MM-DD)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate eventDate,
 
-            @Parameter(description = "Minimum number of seats")
-            @RequestParam(required = false) Integer minSeats,
+            @Parameter(description = "Minimum price")
+            @RequestParam(required = false) java.math.BigDecimal minPrice,
 
-            @Parameter(description = "Maximum number of seats")
-            @RequestParam(required = false) Integer maxSeats,
+            @Parameter(description = "Maximum price")
+            @RequestParam(required = false) java.math.BigDecimal maxPrice,
+
+            @Parameter(description = "Filter by multiple ticket availability statuses (AVAILABLE, ALMOST_SOLD_OUT, SOLD_OUT)")
+            @RequestParam(required = false) List<TicketAvailabilityStatus> ticketAvailabilityStatuses,
 
             @Parameter(description = "Include expired events (default: true)")
             @RequestParam(required = false, defaultValue = "true") Boolean includeExpired,
@@ -86,7 +93,7 @@ public class EventController {
     ) {
         EventFilterRequest filter = EventFilterRequest.builder()
                 .keyword(keyword)
-                .categoryIds(categoryIds)
+                .categories(categories)
                 .eventTypes(eventTypes)
                 .eventStatuses(eventStatuses)
                 .provinceCodes(provinceCodes)
@@ -94,8 +101,9 @@ public class EventController {
                 .startDate(startDate)
                 .endDate(endDate)
                 .eventDate(eventDate)
-                .minSeats(minSeats)
-                .maxSeats(maxSeats)
+                .minPrice(minPrice)
+                .maxPrice(maxPrice)
+                .ticketAvailabilityStatuses(ticketAvailabilityStatuses)
                 .includeExpired(includeExpired)
                 .page(page - 1)
                 .size(size)
@@ -105,6 +113,23 @@ public class EventController {
 
         BasePageResponse<ListEventResponse> response = eventService.getEvents(filter);
         return ResponseEntity.ok(BaseResponse.ok("lấy danh sách thành công", response));
+    }
+
+    @GetMapping("/trending")
+    @Operation(summary = "Get trending events", description = "Get list of trending events ordered by favorites and start time")
+    public ResponseEntity<BaseResponse<BasePageResponse<TrendingEventResponse>>> getTrendingEvents(
+            @Parameter(description = "Limit number of events returned")
+            @RequestParam(required = false, defaultValue = "10") Integer limit
+    ) {
+        BasePageResponse<TrendingEventResponse> response = eventService.getTrendingEvents(limit);
+        return ResponseEntity.ok(BaseResponse.ok("Lấy danh sách sự kiện nổi bật thành công", response));
+    }
+
+    @GetMapping("/homepage")
+    @Operation(summary = "Get homepage events", description = "Get events grouped by sections for the homepage")
+    public ResponseEntity<BaseResponse<HomepageResponse>> getHomepageEvents() {
+        HomepageResponse response = eventService.getHomepageEvents();
+        return ResponseEntity.ok(BaseResponse.ok("Lấy thông tin trang chủ thành công", response));
     }
 
     @GetMapping("/{eventId}")
@@ -164,5 +189,16 @@ public class EventController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/recommended")
+    @Operation(summary = "Get recommended events for current user",
+            description = "Get personalized event recommendations based on user's views, favorites, and purchase history")
+    public ResponseEntity<BaseResponse<java.util.List<ListEventResponse>>> getRecommendedEvents(
+            @Parameter(description = "Number of recommendations to return (default: 4)")
+            @RequestParam(required = false, defaultValue = "4") Integer limit
+    ) {
+        java.util.List<ListEventResponse> recommendations = eventService.getRecommendedEvents(limit);
+        return ResponseEntity.ok(BaseResponse.ok("Lấy gợi ý thành công", recommendations));
     }
 }

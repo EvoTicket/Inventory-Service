@@ -1,7 +1,6 @@
 package com.capstone.inventoryservice.domain.controller;
 
 import com.capstone.inventoryservice.domain.dto.BaseResponse;
-import com.capstone.inventoryservice.domain.service.CategoryService;
 import com.capstone.inventoryservice.domain.service.EventService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -18,7 +17,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/upload")
 public class UploadController {
     private final EventService eventService;
-    private final CategoryService categoryService;
 
     @PostMapping(value = "/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Upload avatar")
@@ -54,14 +52,6 @@ public class UploadController {
                             .body(BaseResponse.badRequest("eventId phải khác null với type " + type));
                 }
                 result = eventService.uploadEventImage(file, eventId, type);
-            }
-
-            case "category" -> {
-                if (categoryId == null) {
-                    return ResponseEntity.badRequest()
-                            .body(BaseResponse.badRequest("categoryId phải khác null với type " + type));
-                }
-                result = categoryService.uploadIconUrl(file, categoryId);
             }
 
             default -> {

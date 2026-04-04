@@ -1,7 +1,7 @@
 package com.capstone.inventoryservice.model.repository;
 
 import com.capstone.inventoryservice.model.entity.Event;
-import com.capstone.inventoryservice.model.enums.EventStatus;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -24,20 +24,23 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     @Query("SELECT e FROM Event e WHERE e.eventName LIKE %:keyword% OR e.description LIKE %:keyword%")
     List<Event> searchEventsByKeyword(@Param("keyword") String keyword);
 
-    @Query("SELECT e FROM Event e WHERE e.eventStatus = :status AND e.startDatetime > :currentDate ORDER BY e.startDatetime ASC")
-    List<Event> findUpcomingEventsByStatus(@Param("status") EventStatus status,
-                                           @Param("currentDate") LocalDateTime currentDate);
+    @Query("SELECT e FROM Event e " +
+            "LEFT JOIN e.ticketTypes tt " +
+            "WHERE e.isCancelled = false AND e.endDatetime > :now " +
+            "GROUP BY e " +
+            "ORDER BY (COALESCE(SUM(tt.quantitySold), 0) * 5 + (SELECT COUNT(v) FROM EventView v WHERE v.event = e)) DESC, " +
+            "e.startDatetime ASC")
+    Page<Event> findTrendingEvents(@Param("now") LocalDateTime now, Pageable pageable);
 
     @Query("""
-    SELECT DISTINCT e
-    FROM Event e
-    LEFT JOIN FETCH e.ticketTypes tt
-    LEFT JOIN FETCH e.reviews r
-    LEFT JOIN FETCH r.images
-    WHERE e.id = :eventId
-    """)
+            SELECT DISTINCT e
+            FROM Event e
+            LEFT JOIN FETCH e.ticketTypes tt
+            LEFT JOIN FETCH e.reviews r
+            LEFT JOIN FETCH r.images
+            WHERE e.id = :eventId
+            """)
     Optional<Event> findByIdWithDetails(@Param("eventId") Long eventId);
-
 
     @Query("SELECT ufe.event.id, COUNT(ufe.id) FROM UserFavoriteEvent ufe " +
             "WHERE ufe.event.id IN :eventIds " +
@@ -50,19 +53,52 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
                                             @Param("eventIds") List<Long> eventIds);
 
     List<Event> findByStartDatetimeAfter(LocalDateTime dateTime);
-    List<Event> findByCategoryId(Long categoryId);
+
+    @Query("""
+                SELECT e FROM Event e 
+                WHERE e.isCancelled = false 
+                  AND e.startDatetime > :now 
+                  AND e.startDatetime <= :oneMonthLater
+                ORDER BY e.startDatetime ASC 
+            """)
+    Page<Event> findUpcomingEvents(
+            @Param("now") LocalDateTime now,
+            @Param("oneMonthLater") LocalDateTime oneMonthLater,
+            Pageable pageable
+    );
+
+    Page<Event> findByCategory(com.capstone.inventoryservice.model.enums.EventCategory category, Pageable pageable);
 
     @Query("SELECT DISTINCT e FROM Event e " +
             "LEFT JOIN FETCH e.category " +
             "LEFT JOIN FETCH e.ward " +
             "LEFT JOIN FETCH e.province " +
-            "WHERE e.organizerId = :organizerId " +
-            "AND (:eventStatus IS NULL OR e.eventStatus = :eventStatus)")
-    Page<Event> findEventsByOrganizerIdAndStatus(
-            @Param("organizerId") Long organizerId,
-            @Param("eventStatus") EventStatus eventStatus,
-            Pageable pageable
-    );
+            "WHERE e.organizerId = :organizerId")
+    List<Event> findByOrganizerId(@Param("organizerId") Long organizerId);
 
     Page<Event> findByOrganizerId(Long organizerId, Pageable pageable);
+
+    @Query("SELECT e FROM Event e WHERE e.category = :category AND e.id NOT IN :excludeIds AND e.isCancelled = false AND e.endDatetime > :now")
+    Page<Event> findByCategoryExcludingIds(@Param("category") com.capstone.inventoryservice.model.enums.EventCategory category,
+                                            @Param("excludeIds") List<Long> excludeIds,
+                                            @Param("now") LocalDateTime now,
+                                            Pageable pageable);
+
+    @Query("SELECT e FROM Event e WHERE e.province.code = :provinceCode AND e.id NOT IN :excludeIds AND e.isCancelled = false AND e.endDatetime > :now")
+    Page<Event> findByProvinceExcludingIds(@Param("provinceCode") String provinceCode,
+                                            @Param("excludeIds") List<Long> excludeIds,
+                                            @Param("now") LocalDateTime now,
+                                            Pageable pageable);
+
+    @Query("SELECT e FROM Event e WHERE e.organizerId = :organizerId AND e.id NOT IN :excludeIds AND e.isCancelled = false AND e.endDatetime > :now")
+    Page<Event> findByOrganizerIdExcludingIds(@Param("organizerId") Long organizerId,
+                                               @Param("excludeIds") List<Long> excludeIds,
+                                               @Param("now") LocalDateTime now,
+                                               Pageable pageable);
+
+    @Query("SELECT e FROM Event e WHERE e.eventType = :eventType AND e.id NOT IN :excludeIds AND e.isCancelled = false AND e.endDatetime > :now")
+    Page<Event> findByEventTypeExcludingIds(@Param("eventType") com.capstone.inventoryservice.model.enums.EventType eventType,
+                                             @Param("excludeIds") List<Long> excludeIds,
+                                             @Param("now") LocalDateTime now,
+                                             Pageable pageable);
 }

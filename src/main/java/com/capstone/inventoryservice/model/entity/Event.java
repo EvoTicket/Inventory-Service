@@ -3,6 +3,7 @@ package com.capstone.inventoryservice.model.entity;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Formula;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -50,9 +51,9 @@ public class Event {
     @Column(name = "end_datetime")
     private LocalDateTime endDatetime;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "event_status")
-    private EventStatus eventStatus;
+    @Column(name = "is_cancelled")
+    @Builder.Default
+    private Boolean isCancelled = false;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "event_type")
@@ -73,9 +74,21 @@ public class Event {
     @Column(name = "is_featured")
     private Boolean isFeatured;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
-    private EventCategory category;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category")
+    private com.capstone.inventoryservice.model.enums.EventCategory category;
+
+    @Formula("(SELECT MIN(t.price) FROM inventory_service.ticket_types t WHERE t.event_id = id)")
+    private BigDecimal minPrice;
+
+    @Formula("(SELECT COALESCE(SUM(t.quantity_sold), 0) FROM inventory_service.ticket_types t WHERE t.event_id = id)")
+    private Integer totalQuantitySold;
+
+    @Formula("(SELECT COALESCE(SUM(t.quantity_total), 0) FROM inventory_service.ticket_types t WHERE t.event_id = id)")
+    private Integer totalQuantityTotal;
+
+    @Formula("(SELECT COUNT(v.id) FROM inventory_service.event_views v WHERE v.event_id = id)")
+    private Integer viewCount;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -111,5 +124,57 @@ public class Event {
             return address + ", " + ward.getName() + ", " + province.getName();
         }
         return address;
+    }
+
+    @Transient
+    public EventStatus getEventStatus() {
+        if (this.isCancelled != null && this.isCancelled) {
+            return EventStatus.CANCELLED;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        if (this.endDatetime != null && now.isAfter(this.endDatetime)) {
+            return EventStatus.COMPLETED;
+        }
+
+        if (this.startDatetime != null && this.endDatetime != null &&
+            !now.isBefore(this.startDatetime) && !now.isAfter(this.endDatetime)) {
+            return EventStatus.ON_GOING;
+        }
+
+        LocalDateTime minSaleStart = null;
+        LocalDateTime maxSaleEnd = null;
+
+        if (this.ticketTypes != null && !this.ticketTypes.isEmpty()) {
+            for (TicketType t : this.ticketTypes) {
+                if (t.getSaleStartDate() != null) {
+                    if (minSaleStart == null || t.getSaleStartDate().isBefore(minSaleStart)) {
+                        minSaleStart = t.getSaleStartDate();
+                    }
+                }
+                if (t.getSaleEndDate() != null) {
+                    if (maxSaleEnd == null || t.getSaleEndDate().isAfter(maxSaleEnd)) {
+                        maxSaleEnd = t.getSaleEndDate();
+                    }
+                }
+            }
+        }
+
+        if (minSaleStart != null && now.isBefore(minSaleStart)) {
+            return EventStatus.UPCOMING;
+        }
+
+        if (minSaleStart != null && maxSaleEnd != null && 
+            !now.isBefore(minSaleStart) && !now.isAfter(maxSaleEnd)) {
+            return EventStatus.ON_SALE;
+        }
+
+        if (maxSaleEnd != null && this.startDatetime != null &&
+            now.isAfter(maxSaleEnd) && now.isBefore(this.startDatetime)) {
+            return EventStatus.SALE_CLOSED;
+        }
+
+        return EventStatus.UPCOMING;
     }
 }

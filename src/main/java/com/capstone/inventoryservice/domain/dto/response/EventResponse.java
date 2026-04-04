@@ -3,6 +3,7 @@ package com.capstone.inventoryservice.domain.dto.response;
 import com.capstone.inventoryservice.domain.client.OrgInternalResponse;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
+import com.capstone.inventoryservice.model.enums.EventCategory;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -29,8 +30,7 @@ public class EventResponse {
     private Integer totalSeats;
     private Long organizerId;
     private Boolean isFeatured;
-    private Long categoryId;
-    private String categoryName;
+    private EventCategory category;
     private BigDecimal latitude;
     private BigDecimal longitude;
     private List<TicketTypeResponse> ticketTypes;

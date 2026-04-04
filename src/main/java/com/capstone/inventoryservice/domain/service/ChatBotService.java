@@ -3,10 +3,9 @@ package com.capstone.inventoryservice.domain.service;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
 import com.capstone.inventoryservice.model.entity.Event;
-import com.capstone.inventoryservice.model.entity.EventCategory;
 import com.capstone.inventoryservice.model.entity.TicketType;
 import com.capstone.inventoryservice.model.entity.UserFavoriteEvent;
-import com.capstone.inventoryservice.model.repository.EventCategoryRepository;
+import com.capstone.inventoryservice.model.enums.EventCategory;
 import com.capstone.inventoryservice.model.repository.EventRepository;
 import com.capstone.inventoryservice.model.repository.TicketTypeRepository;
 import com.capstone.inventoryservice.model.repository.UserFavoriteEventRepository;
@@ -30,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -47,7 +47,6 @@ public class ChatBotService {
     private final ChatClient chatClient;
     private final ChatClient ragChatClient;
     private final EventRepository eventRepository;
-    private final EventCategoryRepository eventCategoryRepository;
     private final TicketTypeRepository ticketTypeRepository;
     private final UserFavoriteEventRepository userFavoriteEventRepository;
     private final JwtUtil jwtUtil;
@@ -58,7 +57,6 @@ public class ChatBotService {
             ChatClient chatClient,
             @Qualifier("ragChatClient") ChatClient ragChatClient,
             EventRepository eventRepository,
-            EventCategoryRepository eventCategoryRepository,
             TicketTypeRepository ticketTypeRepository,
             UserFavoriteEventRepository userFavoriteEventRepository,
             JwtUtil jwtUtil,
@@ -68,7 +66,6 @@ public class ChatBotService {
         this.chatClient = chatClient;
         this.ragChatClient = ragChatClient;
         this.eventRepository = eventRepository;
-        this.eventCategoryRepository = eventCategoryRepository;
         this.ticketTypeRepository = ticketTypeRepository;
         this.userFavoriteEventRepository = userFavoriteEventRepository;
         this.jwtUtil = jwtUtil;
@@ -181,7 +178,10 @@ public class ChatBotService {
 
     private String buildCategoriesContext() {
         StringBuilder sb = new StringBuilder("=== DANH MỤC SỰ KIỆN ===\n");
-        eventCategoryRepository.findAll().forEach(c -> sb.append(formatCategory(c)));
+
+        Arrays.stream(EventCategory.values())
+                .forEach(c -> sb.append(formatCategory(c)));
+
         return sb.toString();
     }
 
@@ -216,7 +216,7 @@ public class ChatBotService {
 
     private String buildStatisticsContext() {
         long totalEvents = eventRepository.count();
-        long totalCategories = eventCategoryRepository.count();
+        long totalCategories = EventCategory.values().length;
         long totalTicketTypes = ticketTypeRepository.count();
         long upcoming = eventRepository.findByStartDatetimeAfter(LocalDateTime.now()).size();
 
@@ -413,10 +413,8 @@ public class ChatBotService {
     }
 
     private String formatCategory(EventCategory c) {
-        return String.format("• %s — %s (%d sự kiện)\n",
-                c.getCategoryName(),
-                c.getDescription(),
-                c.getEvents() != null ? c.getEvents().size() : 0
+        return String.format("• %s ",
+                c.getDisplayName()
         );
     }
 }

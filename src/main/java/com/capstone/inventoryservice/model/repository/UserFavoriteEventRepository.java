@@ -30,4 +30,7 @@ public interface UserFavoriteEventRepository extends JpaRepository<UserFavoriteE
     );
 
     List<UserFavoriteEvent> findByUserId(Long userId);
+
+    @Query("SELECT DISTINCT ufe.event.id FROM UserFavoriteEvent ufe WHERE ufe.userId = :userId")
+    List<Long> findFavoritedEventIdsByUserId(@Param("userId") Long userId);
 }

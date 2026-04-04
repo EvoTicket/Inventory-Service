@@ -2,6 +2,8 @@ package com.capstone.inventoryservice.domain.dto.request;
 
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
+import com.capstone.inventoryservice.model.enums.EventCategory;
+import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,7 +21,7 @@ public class EventFilterRequest {
 
     private String keyword;
 
-    private List<Long> categoryIds;
+    private List<EventCategory> categories;
     private List<EventType> eventTypes;
     private List<EventStatus> eventStatuses;
     private List<Integer> provinceCodes;
@@ -34,8 +36,10 @@ public class EventFilterRequest {
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate eventDate;
 
-    private Integer minSeats;
-    private Integer maxSeats;
+    private java.math.BigDecimal minPrice;
+    private java.math.BigDecimal maxPrice;
+
+    private List<TicketAvailabilityStatus> ticketAvailabilityStatuses;
 
     private Boolean includeExpired;
 

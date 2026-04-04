@@ -1,7 +1,7 @@
 package com.capstone.inventoryservice.domain.dto.request;
 
-import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
+import com.capstone.inventoryservice.model.enums.EventCategory;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -18,11 +18,11 @@ public class UpdateEventRequest {
     private String address;
     private LocalDateTime startDatetime;
     private LocalDateTime endDatetime;
-    private EventStatus eventStatus;
+    private Boolean isCancelled;
     private EventType eventType;
     private Integer totalSeats;
     private Boolean isFeatured;
-    private Long categoryId;
+    private EventCategory category;
     private BigDecimal latitude;
     private BigDecimal longitude;
 }

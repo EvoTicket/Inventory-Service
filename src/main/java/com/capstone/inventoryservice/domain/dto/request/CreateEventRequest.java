@@ -1,7 +1,7 @@
 package com.capstone.inventoryservice.domain.dto.request;
 
-import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
+import com.capstone.inventoryservice.model.enums.EventCategory;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -38,9 +38,6 @@ public class CreateEventRequest {
     @NotNull(message = "End datetime is required")
     private LocalDateTime endDatetime;
 
-    @NotNull(message = "Event status is required")
-    private EventStatus eventStatus;
-
     @NotNull(message = "Event type is required")
     private EventType eventType;
 
@@ -54,8 +51,8 @@ public class CreateEventRequest {
 
     private BigDecimal longitude;
 
-    @NotNull(message = "Category ID is required")
-    private Long categoryId;
+    @NotNull(message = "Category is required")
+    private EventCategory category;
 
     private List<CreateTicketTypeRequest> ticketTypes;
 }
