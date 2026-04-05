@@ -25,6 +25,8 @@ public class EventResponse {
     private EventType eventType;
     private String bannerImage;
     private String thumbnailImage;
+    private String introduction;
+    private String seatMapImage;
     private Integer totalSeats;
     private Long organizerId;
     private Boolean isFeatured;

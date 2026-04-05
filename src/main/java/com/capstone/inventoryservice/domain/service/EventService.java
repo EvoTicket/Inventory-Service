@@ -10,7 +10,6 @@ import com.capstone.inventoryservice.domain.dto.request.CreateShowtimeRequest;
 import com.capstone.inventoryservice.domain.dto.request.CreateTicketTypeRequest;
 import com.capstone.inventoryservice.domain.dto.request.EventFilterRequest;
 import com.capstone.inventoryservice.domain.dto.request.UpdateEventRequest;
-import com.capstone.inventoryservice.domain.dto.request.UpdateShowtimeRequest;
 import com.capstone.inventoryservice.domain.dto.response.EventResponse;
 import com.capstone.inventoryservice.domain.dto.response.HomepageResponse;
 import com.capstone.inventoryservice.domain.dto.response.HomepageSectionResponse;
@@ -33,12 +32,13 @@ import com.capstone.inventoryservice.model.enums.EventType;
 import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.repository.EventRepository;
+import com.capstone.inventoryservice.model.repository.EventViewRepository;
 import com.capstone.inventoryservice.model.repository.ShowtimeRepository;
+import com.capstone.inventoryservice.model.repository.UserFavoriteEventRepository;
 import com.capstone.inventoryservice.security.JwtUtil;
 import com.capstone.inventoryservice.domain.specification.EventSpecification;
 import com.capstone.inventoryservice.domain.util.EventUtil;
 import com.capstone.inventoryservice.domain.util.LocationUtil;
-import com.cloudinary.Cloudinary;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
@@ -61,15 +62,15 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final ShowtimeRepository showtimeRepository;
-    private final com.capstone.inventoryservice.model.repository.EventViewRepository eventViewRepository;
-    private final com.capstone.inventoryservice.model.repository.UserFavoriteEventRepository userFavoriteEventRepository;
+    private final EventViewRepository eventViewRepository;
+    private final UserFavoriteEventRepository userFavoriteEventRepository;
     private final JwtUtil jwtUtil;
     private final IAMFeignClient iamFeignClient;
     private final OrderFeignClient orderFeignClient;
     private final LocationUtil locationUtil;
     private final EventUtil eventUtil;
     private final TicketTypeMapper ticketTypeMapper;
-    private final Cloudinary cloudinary;
+    private final EventImageUploadService eventImageUploadService;
     private final ApplicationEventPublisher eventPublisher;
     private final ReviewMapper reviewMapper;
 
@@ -306,7 +307,7 @@ public class EventService {
         eventViewRepository.save(view);
     }
 
-    public EventResponse createEvent(CreateEventRequest request) {
+    public EventResponse createEvent(CreateEventRequest request, MultipartFile bannerFile, MultipartFile thumbnailFile, MultipartFile seatMapFile) {
 
         Long orgId = jwtUtil.getDataFromAuth().organizationId();
         if(orgId == null) {
@@ -375,6 +376,33 @@ public class EventService {
         }
         Event savedEvent = eventRepository.save(event);
 
+        List<CompletableFuture<Void>> uploadTasks = new ArrayList<>();
+        if (bannerFile != null && !bannerFile.isEmpty()) {
+            try {
+                uploadTasks.add(eventImageUploadService.uploadImageAsync(savedEvent, bannerFile.getBytes(), "banner"));
+            } catch (IOException e) {
+                throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh banner: " + e.getMessage());
+            }
+        }
+        if (thumbnailFile != null && !thumbnailFile.isEmpty()) {
+            try {
+                uploadTasks.add(eventImageUploadService.uploadImageAsync(savedEvent, thumbnailFile.getBytes(), "thumbnail"));
+            } catch (IOException e) {
+                throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh thumbnail: " + e.getMessage());
+            }
+        }
+        if (seatMapFile != null && !seatMapFile.isEmpty()) {
+            try {
+                uploadTasks.add(eventImageUploadService.uploadImageAsync(savedEvent, seatMapFile.getBytes(), "seat_map"));
+            } catch (IOException e) {
+                throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh sơ đồ chỗ: " + e.getMessage());
+            }
+        }
+
+        CompletableFuture.allOf(uploadTasks.toArray(new CompletableFuture[0])).join();
+
+        eventRepository.save(savedEvent);
+
         for (Showtime s : savedEvent.getShowtimes()) {
             for (TicketType t : s.getTicketTypes()) {
                 eventPublisher.publishEvent(
@@ -440,43 +468,6 @@ public class EventService {
         return true;
     }
 
-    @Transactional
-    @SuppressWarnings("unchecked")
-    public String uploadEventImage(MultipartFile file, Long evenId, String type) {
-        String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
-            throw new IllegalArgumentException("File phải là ảnh");
-        }
-
-        String folder = "event/" + evenId + "/" + type + "/" ;
-
-        String publicId = UUID.randomUUID().toString();
-
-        Map<String, Object> options = new HashMap<>();
-        options.put("resource_type", "image");
-        options.put("folder",  folder);
-        options.put("public_id", publicId);
-        options.put("overwrite", true);
-
-        try {
-            Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), options);
-            Event event = eventUtil.getEventOrElseThrow(evenId);
-            switch (type) {
-                case "banner":
-                    event.setBannerImage(uploadResult.get("url").toString());
-                    break;
-                case "thumbnail":
-                    event.setThumbnailImage(uploadResult.get("url").toString());
-                    break;
-                default:
-                    break;
-            }
-            return uploadResult.get("url").toString();
-        } catch (IOException e) {
-            throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể tải ảnh lên Cloudinary: " + e.getMessage());
-        }
-    }
-
     @Transactional(readOnly = true)
     public BasePageResponse<ListEventResponse> getEventsByOrganizer(
             EventStatus eventStatus,
@@ -537,6 +528,8 @@ public class EventService {
                 .eventType(event.getEventType())
                 .bannerImage(event.getBannerImage())
                 .thumbnailImage(event.getThumbnailImage())
+                .introduction(event.getIntroduction())
+                .seatMapImage(event.getSeatMapImage())
                 .totalSeats(event.getTotalSeats())
                 .organizerId(event.getOrganizerId())
                 .isFeatured(event.getIsFeatured())
@@ -730,12 +723,5 @@ public class EventService {
         return mapToResponseList(upcomingEvents.getContent());
     }
 
-    private static class ScoredEvent {
-        final Event event;
-        final int score;
-        ScoredEvent(Event event, int score) {
-            this.event = event;
-            this.score = score;
-        }
-    }
+    private record ScoredEvent(Event event, int score) { }
 }

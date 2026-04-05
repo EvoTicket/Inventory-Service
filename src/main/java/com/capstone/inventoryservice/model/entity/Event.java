@@ -1,5 +1,6 @@
 package com.capstone.inventoryservice.model.entity;
 
+import com.capstone.inventoryservice.model.enums.EventCategory;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
 import jakarta.persistence.*;
@@ -58,6 +59,12 @@ public class Event {
     @Column(name = "thumbnail_image")
     private String thumbnailImage;
 
+    @Column(name = "introduction", columnDefinition = "TEXT")
+    private String introduction;
+
+    @Column(name = "seat_map_image")
+    private String seatMapImage;
+
     @Column(name = "total_seats")
     private Integer totalSeats;
 
@@ -69,7 +76,7 @@ public class Event {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category")
-    private com.capstone.inventoryservice.model.enums.EventCategory category;
+    private EventCategory category;
 
     @Formula("(SELECT MIN(t.price) FROM inventory_service.ticket_types t INNER JOIN inventory_service.showtimes s ON t.showtime_id = s.id WHERE s.event_id = id)")
     private BigDecimal minPrice;
