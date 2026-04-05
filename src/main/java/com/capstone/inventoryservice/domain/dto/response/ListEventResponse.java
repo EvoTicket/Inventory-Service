@@ -1,21 +1,22 @@
 package com.capstone.inventoryservice.domain.dto.response;
 
 import com.capstone.inventoryservice.model.entity.Event;
+import com.capstone.inventoryservice.model.entity.Showtime;
+import com.capstone.inventoryservice.model.entity.TicketType;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
 import com.capstone.inventoryservice.model.enums.EventCategory;
+import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.Set;
-import java.math.BigDecimal;
-import com.capstone.inventoryservice.model.entity.TicketType;
-import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
 import java.util.Objects;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -57,29 +58,59 @@ public class ListEventResponse {
 
     public static ListEventResponse mapToResponse(Event event, Map<Long, Long> favoriteCountMap,  Set<Long> userFavoriteEventIds) {
         LocalDateTime now = LocalDateTime.now();
-        boolean expired = event.getEndDatetime() != null && event.getEndDatetime().isBefore(now);
 
-        BigDecimal floorPriceCalc = event.getTicketTypes() != null 
-                ? event.getTicketTypes().stream()
-                    .map(TicketType::getPrice)
-                    .filter(Objects::nonNull)
-                    .min(BigDecimal::compareTo)
-                    .orElse(BigDecimal.ZERO)
-                : BigDecimal.ZERO;
+        LocalDateTime earliestStart = null;
+        LocalDateTime latestEnd = null;
+        if (event.getShowtimes() != null) {
+            for (Showtime s : event.getShowtimes()) {
+                if (Boolean.TRUE.equals(s.getIsCancelled())) continue;
+                if (s.getStartDatetime() != null && (earliestStart == null || s.getStartDatetime().isBefore(earliestStart))) {
+                    earliestStart = s.getStartDatetime();
+                }
+                if (s.getEndDatetime() != null && (latestEnd == null || s.getEndDatetime().isAfter(latestEnd))) {
+                    latestEnd = s.getEndDatetime();
+                }
+            }
+        }
+
+        boolean expired = latestEnd != null && latestEnd.isBefore(now);
+
+        BigDecimal floorPriceCalc = BigDecimal.ZERO;
+        if (event.getShowtimes() != null) {
+            for (Showtime s : event.getShowtimes()) {
+                if (Boolean.TRUE.equals(s.getIsCancelled())) continue;
+                if (s.getTicketTypes() != null) {
+                    for (TicketType t : s.getTicketTypes()) {
+                        if (t.getPrice() != null && (floorPriceCalc.compareTo(BigDecimal.ZERO) == 0 || t.getPrice().compareTo(floorPriceCalc) < 0)) {
+                            floorPriceCalc = t.getPrice();
+                        }
+                    }
+                }
+            }
+        }
         
         String provinceNameCalc = event.getProvince() != null ? event.getProvince().getName() : null;
 
-        TicketAvailabilityStatus status = null;
-        if (event.getTicketTypes() != null && !event.getTicketTypes().isEmpty()) {
-            int totalSold = event.getTicketTypes().stream().mapToInt(t -> t.getQuantitySold() != null ? t.getQuantitySold() : 0).sum();
-            int totalCapacity = event.getTicketTypes().stream().mapToInt(t -> t.getQuantityTotal() != null ? t.getQuantityTotal() : 0).sum();
-            
-            if (totalCapacity > 0) {
-                if (totalSold >= totalCapacity) {
-                    status = TicketAvailabilityStatus.SOLD_OUT;
-                } else if (totalSold * 10 >= totalCapacity * 9) {
-                    status = TicketAvailabilityStatus.ALMOST_SOLD_OUT;
+        int totalSold = 0;
+        int totalCapacity = 0;
+        if (event.getShowtimes() != null) {
+            for (Showtime s : event.getShowtimes()) {
+                if (Boolean.TRUE.equals(s.getIsCancelled())) continue;
+                if (s.getTicketTypes() != null) {
+                    for (TicketType t : s.getTicketTypes()) {
+                        totalSold += t.getQuantitySold() != null ? t.getQuantitySold() : 0;
+                        totalCapacity += t.getQuantityTotal() != null ? t.getQuantityTotal() : 0;
+                    }
                 }
+            }
+        }
+
+        TicketAvailabilityStatus status = null;
+        if (totalCapacity > 0) {
+            if (totalSold >= totalCapacity) {
+                status = TicketAvailabilityStatus.SOLD_OUT;
+            } else if (totalSold * 10 >= totalCapacity * 9) {
+                status = TicketAvailabilityStatus.ALMOST_SOLD_OUT;
             }
         }
 
@@ -89,8 +120,8 @@ public class ListEventResponse {
                 .description(event.getDescription())
                 .venue(event.getVenue())
                 .fullAddress(event.getFullAddress())
-                .startDatetime(event.getStartDatetime())
-                .endDatetime(event.getEndDatetime())
+                .startDatetime(earliestStart)
+                .endDatetime(latestEnd)
                 .eventStatus(event.getEventStatus())
                 .eventType(event.getEventType())
                 .bannerImage(event.getBannerImage())

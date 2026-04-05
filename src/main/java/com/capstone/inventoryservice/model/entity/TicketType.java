@@ -28,9 +28,6 @@ public class TicketType {
     @Column(name = "price", nullable = false)
     private BigDecimal price;
 
-    @Column(name = "take_place_time")
-    private LocalDateTime takePlaceTime;
-
     @Column(name = "quantity_total", nullable = false)
     private Integer quantityTotal;
 
@@ -54,8 +51,8 @@ public class TicketType {
     private TicketTypeStatus ticketTypeStatus;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "event_id", nullable = false)
-    private Event event;
+    @JoinColumn(name = "showtime_id", nullable = false)
+    private Showtime showtime;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

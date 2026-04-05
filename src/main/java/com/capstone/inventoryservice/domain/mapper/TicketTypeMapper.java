@@ -13,7 +13,6 @@ public class TicketTypeMapper {
                 .typeName(ticketType.getTypeName())
                 .description(ticketType.getDescription())
                 .price(ticketType.getPrice())
-                .takePlaceTime(ticketType.getTakePlaceTime())
                 .quantityAvailable(ticketType.getQuantityTotal())
                 .quantitySold(ticketType.getQuantitySold())
                 .minPurchase(ticketType.getMinPurchase())
@@ -21,8 +20,9 @@ public class TicketTypeMapper {
                 .saleStartDate(ticketType.getSaleStartDate())
                 .saleEndDate(ticketType.getSaleEndDate())
                 .ticketTypeStatus(ticketType.getTicketTypeStatus())
-                .eventId(ticketType.getEvent().getId())
-                .eventName(ticketType.getEvent().getEventName())
+                .showtimeId(ticketType.getShowtime().getId())
+                .eventId(ticketType.getShowtime().getEvent().getId())
+                .eventName(ticketType.getShowtime().getEvent().getEventName())
                 .build();
     }
 }

@@ -12,15 +12,10 @@ import java.time.LocalDateTime;
 @Builder
 public class CreateTicketTypeRequest {
 
-    @NotNull(message = "Event id is required")
-    private Long eventId;
-
     @NotBlank(message = "Type name is required")
     private String typeName;
 
     private String description;
-
-    private LocalDateTime takePlaceTime;
 
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
@@ -41,4 +36,6 @@ public class CreateTicketTypeRequest {
 
     @NotNull(message = "Ticket type status is required")
     private TicketTypeStatus ticketTypeStatus;
+
+    private Long showtimeId;
 }

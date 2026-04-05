@@ -5,13 +5,13 @@ import com.capstone.inventoryservice.domain.dto.request.OrderItemRequest;
 import com.capstone.inventoryservice.domain.dto.request.UpdateTicketTypeRequest;
 import com.capstone.inventoryservice.domain.client.ListTicketTypesInternalResponse;
 import com.capstone.inventoryservice.domain.dto.response.TicketTypeResponse;
-import com.capstone.inventoryservice.model.entity.Event;
+import com.capstone.inventoryservice.model.entity.Showtime;
 import com.capstone.inventoryservice.model.entity.TicketType;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
 import com.capstone.inventoryservice.domain.mapper.TicketTypeMapper;
 import com.capstone.inventoryservice.model.repository.TicketTypeRepository;
-import com.capstone.inventoryservice.domain.util.EventUtil;
+import com.capstone.inventoryservice.domain.util.ShowtimeUtil;
 import com.capstone.inventoryservice.domain.util.TicketTypeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +29,7 @@ public class TicketTypeService {
 
     private final TicketTypeRepository ticketTypeRepository;
     private final TicketTypeUtil ticketTypeUtil;
-    private final EventUtil eventUtil;
+    private final ShowtimeUtil showtimeUtil;
     private final TicketTypeMapper ticketTypeMapper;
 
     @Transactional(readOnly = true)
@@ -67,9 +67,9 @@ public class TicketTypeService {
                     );
 
             if (eventId == null) {
-                eventId = ticket.getEvent().getId();
-                eventName = ticket.getEvent().getEventName();
-            } else if (!eventId.equals(ticket.getEvent().getId())) {
+                eventId = ticket.getShowtime().getEvent().getId();
+                eventName = ticket.getShowtime().getEvent().getEventName();
+            } else if (!eventId.equals(ticket.getShowtime().getEvent().getId())) {
                 throw new AppException(
                         ErrorCode.BAD_REQUEST,
                         "Các ticket phải thuộc cùng một sự kiện"
@@ -103,7 +103,10 @@ public class TicketTypeService {
 
     @Transactional
     public TicketTypeResponse createTicketType(CreateTicketTypeRequest request) {
-        Event event = eventUtil.getEventOrElseThrow(request.getEventId());
+        if (request.getShowtimeId() == null) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Showtime ID is required");
+        }
+        Showtime showtime = showtimeUtil.getShowtimeOrElseThrow(request.getShowtimeId());
 
         if (
                 request.getSaleStartDate() != null &&
@@ -125,7 +128,6 @@ public class TicketTypeService {
                 .typeName(request.getTypeName())
                 .description(request.getDescription())
                 .price(request.getPrice())
-                .takePlaceTime(request.getTakePlaceTime())
                 .quantityTotal(request.getQuantityTotal())
                 .quantitySold(0)
                 .minPurchase(request.getMinPurchase())
@@ -133,11 +135,11 @@ public class TicketTypeService {
                 .saleStartDate(request.getSaleStartDate())
                 .saleEndDate(request.getSaleEndDate())
                 .ticketTypeStatus(request.getTicketTypeStatus())
-                .event(event)
+                .showtime(showtime)
                 .build();
 
         TicketType savedTicketType = ticketTypeRepository.save(ticketType);
-        event.getTicketTypes().add(savedTicketType);
+        showtime.getTicketTypes().add(savedTicketType);
         return ticketTypeMapper.convertToDTO(savedTicketType);
     }
 
@@ -153,9 +155,6 @@ public class TicketTypeService {
         }
         if (request.getPrice() != null) {
             ticketType.setPrice(request.getPrice());
-        }
-        if (request.getTakePlaceTime() != null) {
-            ticketType.setTakePlaceTime(request.getTakePlaceTime());
         }
         if (request.getQuantityAvailable() != null) {
             ticketType.setQuantityTotal(request.getQuantityAvailable());

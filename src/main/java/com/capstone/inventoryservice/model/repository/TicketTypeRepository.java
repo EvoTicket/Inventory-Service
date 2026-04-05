@@ -15,13 +15,17 @@ import java.util.Optional;
 @Repository
 public interface TicketTypeRepository extends JpaRepository<TicketType, Long> {
 
+    @Query("SELECT t FROM TicketType t WHERE t.showtime.event.id = :eventId")
     List<TicketType> findByEventId(Long eventId);
 
     List<TicketType> findByTicketTypeStatus(TicketTypeStatus status);
 
-    @Query("SELECT t FROM TicketType t WHERE t.event.id = :eventId AND t.ticketTypeStatus = :status")
+    @Query("SELECT t FROM TicketType t WHERE t.showtime.event.id = :eventId AND t.ticketTypeStatus = :status")
     List<TicketType> findByEventAndStatus(@Param("eventId") Long eventId,
                                           @Param("status") TicketTypeStatus status);
+
+    @Query("SELECT t FROM TicketType t WHERE t.showtime.event.id = :eventId AND t.showtime.id = :showtimeId")
+    List<TicketType> findByEventIdAndShowtimeId(@Param("eventId") Long eventId, @Param("showtimeId") Long showtimeId);
 
     @Query("SELECT t FROM TicketType t WHERE t.saleStartDate <= :currentDate AND t.saleEndDate >= :currentDate")
     List<TicketType> findActiveTicketTypes(@Param("currentDate") LocalDateTime currentDate);

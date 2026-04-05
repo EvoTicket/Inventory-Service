@@ -4,12 +4,12 @@ import com.capstone.inventoryservice.domain.dto.request.EventFilterRequest;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
 import com.capstone.inventoryservice.model.entity.Event;
+import com.capstone.inventoryservice.model.entity.Showtime;
 import com.capstone.inventoryservice.model.entity.TicketType;
 import jakarta.persistence.criteria.*;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,37 +46,65 @@ public class EventSpecification {
                 List<Predicate> statusPredicates = new ArrayList<>();
                 LocalDateTime now = LocalDateTime.now();
 
-                for (com.capstone.inventoryservice.model.enums.EventStatus status : filter.getEventStatuses()) {
+                Join<Event, Showtime> showtimeJoin = root.join("showtimes", JoinType.LEFT);
+                Join<Showtime, TicketType> ticketTypeJoin = showtimeJoin.join("ticketTypes", JoinType.LEFT);
+
+                for (EventStatus status : filter.getEventStatuses()) {
                     switch (status) {
                         case CANCELLED:
                             statusPredicates.add(criteriaBuilder.isTrue(root.get("isCancelled")));
                             break;
                         case COMPLETED:
+                            Subquery<LocalDateTime> completedMaxEnd = query.subquery(LocalDateTime.class);
+                            Root<Showtime> completedShowtime = completedMaxEnd.from(Showtime.class);
+                            completedMaxEnd.select(criteriaBuilder.greatest(completedShowtime.<LocalDateTime>get("endDatetime")));
+                            completedMaxEnd.where(criteriaBuilder.equal(completedShowtime.get("event"), root),
+                                    criteriaBuilder.isFalse(completedShowtime.get("isCancelled")));
+
                             statusPredicates.add(criteriaBuilder.and(
                                     criteriaBuilder.isFalse(root.get("isCancelled")),
-                                    criteriaBuilder.lessThan(root.get("endDatetime"), now)
+                                    criteriaBuilder.lessThan(completedMaxEnd, now)
                             ));
                             break;
                         case ON_GOING:
+                            Subquery<LocalDateTime> onGoingMinStart = query.subquery(LocalDateTime.class);
+                            Root<Showtime> ogStart = onGoingMinStart.from(Showtime.class);
+                            onGoingMinStart.select(criteriaBuilder.least(ogStart.<LocalDateTime>get("startDatetime")));
+                            onGoingMinStart.where(criteriaBuilder.equal(ogStart.get("event"), root),
+                                    criteriaBuilder.isFalse(ogStart.get("isCancelled")));
+
+                            Subquery<LocalDateTime> onGoingMaxEnd = query.subquery(LocalDateTime.class);
+                            Root<Showtime> ogEnd = onGoingMaxEnd.from(Showtime.class);
+                            onGoingMaxEnd.select(criteriaBuilder.greatest(ogEnd.<LocalDateTime>get("endDatetime")));
+                            onGoingMaxEnd.where(criteriaBuilder.equal(ogEnd.get("event"), root),
+                                    criteriaBuilder.isFalse(ogEnd.get("isCancelled")));
+
                             statusPredicates.add(criteriaBuilder.and(
                                     criteriaBuilder.isFalse(root.get("isCancelled")),
-                                    criteriaBuilder.lessThanOrEqualTo(root.get("startDatetime"), now),
-                                    criteriaBuilder.greaterThanOrEqualTo(root.get("endDatetime"), now)
+                                    criteriaBuilder.lessThanOrEqualTo(onGoingMinStart, now),
+                                    criteriaBuilder.greaterThanOrEqualTo(onGoingMaxEnd, now)
                             ));
                             break;
                         case UPCOMING:
-                            Subquery<LocalDateTime> upMinSub = query.subquery(LocalDateTime.class);
-                            Root<TicketType> upTicket = upMinSub.from(TicketType.class);
-                            upMinSub.select(criteriaBuilder.least(upTicket.<LocalDateTime>get("saleStartDate")));
-                            upMinSub.where(criteriaBuilder.equal(upTicket.get("event"), root));
+                            Subquery<LocalDateTime> upMinSaleStart = query.subquery(LocalDateTime.class);
+                            Root<TicketType> upTicket = upMinSaleStart.from(TicketType.class);
+                            Join<TicketType, Showtime> upShowtime = upTicket.join("showtime");
+                            upMinSaleStart.select(criteriaBuilder.least(upTicket.<LocalDateTime>get("saleStartDate")));
+                            upMinSaleStart.where(criteriaBuilder.equal(upShowtime.get("event"), root));
+
+                            Subquery<LocalDateTime> upEarliestStart = query.subquery(LocalDateTime.class);
+                            Root<Showtime> upShow = upEarliestStart.from(Showtime.class);
+                            upEarliestStart.select(criteriaBuilder.least(upShow.<LocalDateTime>get("startDatetime")));
+                            upEarliestStart.where(criteriaBuilder.equal(upShow.get("event"), root),
+                                    criteriaBuilder.isFalse(upShow.get("isCancelled")));
 
                             Predicate upCond1 = criteriaBuilder.and(
-                                    criteriaBuilder.isNotNull(upMinSub),
-                                    criteriaBuilder.lessThan(criteriaBuilder.literal(now), upMinSub)
+                                    criteriaBuilder.isNotNull(upMinSaleStart),
+                                    criteriaBuilder.lessThan(criteriaBuilder.literal(now), upMinSaleStart)
                             );
                             Predicate upCond2 = criteriaBuilder.and(
-                                    criteriaBuilder.isNull(upMinSub),
-                                    criteriaBuilder.lessThan(criteriaBuilder.literal(now), root.get("startDatetime"))
+                                    criteriaBuilder.isNull(upMinSaleStart),
+                                    criteriaBuilder.lessThan(criteriaBuilder.literal(now), upEarliestStart)
                             );
 
                             statusPredicates.add(criteriaBuilder.and(
@@ -87,13 +115,15 @@ public class EventSpecification {
                         case ON_SALE:
                             Subquery<LocalDateTime> onSaleMin = query.subquery(LocalDateTime.class);
                             Root<TicketType> onSaleTicketMin = onSaleMin.from(TicketType.class);
+                            Join<TicketType, Showtime> onSaleShowtimeMin = onSaleTicketMin.join("showtime");
                             onSaleMin.select(criteriaBuilder.least(onSaleTicketMin.<LocalDateTime>get("saleStartDate")));
-                            onSaleMin.where(criteriaBuilder.equal(onSaleTicketMin.get("event"), root));
+                            onSaleMin.where(criteriaBuilder.equal(onSaleShowtimeMin.get("event"), root));
 
                             Subquery<LocalDateTime> onSaleMax = query.subquery(LocalDateTime.class);
                             Root<TicketType> onSaleTicketMax = onSaleMax.from(TicketType.class);
+                            Join<TicketType, Showtime> onSaleShowtimeMax = onSaleTicketMax.join("showtime");
                             onSaleMax.select(criteriaBuilder.greatest(onSaleTicketMax.<LocalDateTime>get("saleEndDate")));
-                            onSaleMax.where(criteriaBuilder.equal(onSaleTicketMax.get("event"), root));
+                            onSaleMax.where(criteriaBuilder.equal(onSaleShowtimeMax.get("event"), root));
 
                             Predicate saleRange = criteriaBuilder.and(
                                     criteriaBuilder.greaterThanOrEqualTo(criteriaBuilder.literal(now), onSaleMin),
@@ -108,12 +138,19 @@ public class EventSpecification {
                         case SALE_CLOSED:
                             Subquery<LocalDateTime> closedMax = query.subquery(LocalDateTime.class);
                             Root<TicketType> closedTicketMax = closedMax.from(TicketType.class);
+                            Join<TicketType, Showtime> closedShowtimeMax = closedTicketMax.join("showtime");
                             closedMax.select(criteriaBuilder.greatest(closedTicketMax.<LocalDateTime>get("saleEndDate")));
-                            closedMax.where(criteriaBuilder.equal(closedTicketMax.get("event"), root));
+                            closedMax.where(criteriaBuilder.equal(closedShowtimeMax.get("event"), root));
+
+                            Subquery<LocalDateTime> closedEarliestStart = query.subquery(LocalDateTime.class);
+                            Root<Showtime> closedShow = closedEarliestStart.from(Showtime.class);
+                            closedEarliestStart.select(criteriaBuilder.least(closedShow.<LocalDateTime>get("startDatetime")));
+                            closedEarliestStart.where(criteriaBuilder.equal(closedShow.get("event"), root),
+                                    criteriaBuilder.isFalse(closedShow.get("isCancelled")));
 
                             Predicate closedCond = criteriaBuilder.and(
                                     criteriaBuilder.greaterThan(criteriaBuilder.literal(now), closedMax),
-                                    criteriaBuilder.lessThan(criteriaBuilder.literal(now), root.get("startDatetime"))
+                                    criteriaBuilder.lessThan(criteriaBuilder.literal(now), closedEarliestStart)
                             );
                             statusPredicates.add(criteriaBuilder.and(
                                     criteriaBuilder.isFalse(root.get("isCancelled")),
@@ -150,13 +187,17 @@ public class EventSpecification {
                 LocalDateTime startOfDay = filter.getEventDate().atStartOfDay();
                 LocalDateTime endOfDay = filter.getEventDate().plusDays(1).atStartOfDay();
 
-                Predicate startBeforeOrEqual = criteriaBuilder.lessThanOrEqualTo(
-                        root.get("startDatetime"), endOfDay
-                );
-                Predicate endAfter = criteriaBuilder.greaterThanOrEqualTo(
-                        root.get("endDatetime"), startOfDay
-                );
-                predicates.add(criteriaBuilder.and(startBeforeOrEqual, endAfter));
+                Subquery<Long> eventDateSubquery = query.subquery(Long.class);
+                Root<Showtime> showtimeSub = eventDateSubquery.from(Showtime.class);
+                eventDateSubquery.select(showtimeSub.get("event").get("id"));
+                eventDateSubquery.where(criteriaBuilder.and(
+                        criteriaBuilder.equal(showtimeSub.get("event"), root),
+                        criteriaBuilder.lessThanOrEqualTo(showtimeSub.get("startDatetime"), endOfDay),
+                        criteriaBuilder.greaterThanOrEqualTo(showtimeSub.get("endDatetime"), startOfDay),
+                        criteriaBuilder.isFalse(showtimeSub.get("isCancelled"))
+                ));
+
+                predicates.add(criteriaBuilder.exists(eventDateSubquery));
             }
 
             if (filter.getMinPrice() != null) {
@@ -195,7 +236,13 @@ public class EventSpecification {
 
             if (filter.getIncludeExpired() != null && !filter.getIncludeExpired()) {
                 LocalDateTime now = LocalDateTime.now();
-                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("endDatetime"), now));
+                Subquery<LocalDateTime> notExpiredMaxEnd = query.subquery(LocalDateTime.class);
+                Root<Showtime> notExpiredShowtime = notExpiredMaxEnd.from(Showtime.class);
+                notExpiredMaxEnd.select(criteriaBuilder.greatest(notExpiredShowtime.<LocalDateTime>get("endDatetime")));
+                notExpiredMaxEnd.where(criteriaBuilder.equal(notExpiredShowtime.get("event"), root),
+                        criteriaBuilder.isFalse(notExpiredShowtime.get("isCancelled")));
+
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(notExpiredMaxEnd, now));
             }
 
             query.distinct(true);

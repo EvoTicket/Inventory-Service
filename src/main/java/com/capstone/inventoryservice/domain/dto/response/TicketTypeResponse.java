@@ -14,7 +14,6 @@ public class TicketTypeResponse {
     private String typeName;
     private String description;
     private BigDecimal price;
-    private LocalDateTime takePlaceTime;
     private Integer quantityAvailable;
     private Integer quantitySold;
     private Integer minPurchase;
@@ -22,6 +21,7 @@ public class TicketTypeResponse {
     private LocalDateTime saleStartDate;
     private LocalDateTime saleEndDate;
     private TicketTypeStatus ticketTypeStatus;
+    private Long showtimeId;
     private Long eventId;
     private String eventName;
 }

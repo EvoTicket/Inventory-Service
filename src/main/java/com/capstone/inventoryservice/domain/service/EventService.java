@@ -4,21 +4,26 @@ import com.capstone.inventoryservice.domain.client.IAMFeignClient;
 import com.capstone.inventoryservice.domain.client.OrgInternalResponse;
 import com.capstone.inventoryservice.domain.client.OrderFeignClient;
 import com.capstone.inventoryservice.domain.dto.BasePageResponse;
-import com.capstone.inventoryservice.domain.dto.response.EventVolumeResponse;
 import com.capstone.inventoryservice.domain.dto.event.TicketCreatedEvent;
 import com.capstone.inventoryservice.domain.dto.request.CreateEventRequest;
+import com.capstone.inventoryservice.domain.dto.request.CreateShowtimeRequest;
 import com.capstone.inventoryservice.domain.dto.request.CreateTicketTypeRequest;
 import com.capstone.inventoryservice.domain.dto.request.EventFilterRequest;
 import com.capstone.inventoryservice.domain.dto.request.UpdateEventRequest;
+import com.capstone.inventoryservice.domain.dto.request.UpdateShowtimeRequest;
 import com.capstone.inventoryservice.domain.dto.response.EventResponse;
 import com.capstone.inventoryservice.domain.dto.response.HomepageResponse;
 import com.capstone.inventoryservice.domain.dto.response.HomepageSectionResponse;
 import com.capstone.inventoryservice.domain.dto.response.ListEventResponse;
 import com.capstone.inventoryservice.domain.dto.response.ReviewResponse;
+import com.capstone.inventoryservice.domain.dto.response.ShowtimeResponse;
 import com.capstone.inventoryservice.domain.dto.response.TicketTypeResponse;
 import com.capstone.inventoryservice.domain.dto.response.TrendingEventResponse;
+import com.capstone.inventoryservice.domain.dto.response.EventVolumeResponse;
 import com.capstone.inventoryservice.domain.mapper.ReviewMapper;
 import com.capstone.inventoryservice.model.entity.Event;
+import com.capstone.inventoryservice.model.entity.EventView;
+import com.capstone.inventoryservice.model.entity.Showtime;
 import com.capstone.inventoryservice.model.entity.TicketType;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
@@ -28,7 +33,7 @@ import com.capstone.inventoryservice.model.enums.EventType;
 import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.repository.EventRepository;
-import com.capstone.inventoryservice.model.repository.TicketTypeRepository;
+import com.capstone.inventoryservice.model.repository.ShowtimeRepository;
 import com.capstone.inventoryservice.security.JwtUtil;
 import com.capstone.inventoryservice.domain.specification.EventSpecification;
 import com.capstone.inventoryservice.domain.util.EventUtil;
@@ -55,6 +60,7 @@ import java.util.stream.Collectors;
 public class EventService {
 
     private final EventRepository eventRepository;
+    private final ShowtimeRepository showtimeRepository;
     private final com.capstone.inventoryservice.model.repository.EventViewRepository eventViewRepository;
     private final com.capstone.inventoryservice.model.repository.UserFavoriteEventRepository userFavoriteEventRepository;
     private final JwtUtil jwtUtil;
@@ -86,13 +92,13 @@ public class EventService {
         Page<Event> upcomingEvents = eventRepository.findUpcomingEvents(now, oneMonthLater, pageable);
         List<ListEventResponse> upcomingResponses = mapToResponseList(upcomingEvents.getContent());
 
-        Page<Event> livestageEvents = eventRepository.findByCategory(com.capstone.inventoryservice.model.enums.EventCategory.LIVESTAGE, pageable);
+        Page<Event> livestageEvents = eventRepository.findByCategory(EventCategory.LIVESTAGE, pageable);
         List<ListEventResponse> livestageResponses = mapToResponseList(livestageEvents.getContent());
 
-        Page<Event> stageArtEvents = eventRepository.findByCategory(com.capstone.inventoryservice.model.enums.EventCategory.STAGE_ART, pageable);
+        Page<Event> stageArtEvents = eventRepository.findByCategory(EventCategory.STAGE_ART, pageable);
         List<ListEventResponse> stageArtResponses = mapToResponseList(stageArtEvents.getContent());
 
-        Page<Event> workshopEvents = eventRepository.findByCategory(com.capstone.inventoryservice.model.enums.EventCategory.WORKSHOP, pageable);
+        Page<Event> workshopEvents = eventRepository.findByCategory(EventCategory.WORKSHOP, pageable);
         List<ListEventResponse> workshopResponses = mapToResponseList(workshopEvents.getContent());
 
         return HomepageResponse.builder()
@@ -156,11 +162,19 @@ public class EventService {
                 }
             }
 
-            BigDecimal floorPrice = event.getTicketTypes().stream()
-                    .map(TicketType::getPrice)
-                    .filter(Objects::nonNull)
-                    .min(BigDecimal::compareTo)
-                    .orElse(BigDecimal.ZERO);
+            BigDecimal floorPrice = BigDecimal.ZERO;
+            if (event.getShowtimes() != null) {
+                for (Showtime s : event.getShowtimes()) {
+                    if (Boolean.TRUE.equals(s.getIsCancelled())) continue;
+                    if (s.getTicketTypes() != null) {
+                        for (TicketType t : s.getTicketTypes()) {
+                            if (t.getPrice() != null && (floorPrice.compareTo(BigDecimal.ZERO) == 0 || t.getPrice().compareTo(floorPrice) < 0)) {
+                                floorPrice = t.getPrice();
+                            }
+                        }
+                    }
+                }
+            }
 
             EventVolumeResponse volumeData = finalVolumeMap.get(event.getId());
             BigDecimal volume24h = volumeData != null && volumeData.getVolume24h() != null
@@ -170,17 +184,26 @@ public class EventService {
                     ? volumeData.getHotness()
                     : 0.0;
 
-            TicketAvailabilityStatus status = null;
-            if (event.getTicketTypes() != null && !event.getTicketTypes().isEmpty()) {
-                int totalSold = event.getTicketTypes().stream().mapToInt(t -> t.getQuantitySold() != null ? t.getQuantitySold() : 0).sum();
-                int totalCapacity = event.getTicketTypes().stream().mapToInt(t -> t.getQuantityTotal() != null ? t.getQuantityTotal() : 0).sum();
-                
-                if (totalCapacity > 0) {
-                    if (totalSold >= totalCapacity) {
-                        status = TicketAvailabilityStatus.SOLD_OUT;
-                    } else if (totalSold * 10 >= totalCapacity * 9) {
-                        status = TicketAvailabilityStatus.ALMOST_SOLD_OUT;
+            int totalSold = 0;
+            int totalCapacity = 0;
+            if (event.getShowtimes() != null) {
+                for (Showtime s : event.getShowtimes()) {
+                    if (Boolean.TRUE.equals(s.getIsCancelled())) continue;
+                    if (s.getTicketTypes() != null) {
+                        for (TicketType t : s.getTicketTypes()) {
+                            totalSold += t.getQuantitySold() != null ? t.getQuantitySold() : 0;
+                            totalCapacity += t.getQuantityTotal() != null ? t.getQuantityTotal() : 0;
+                        }
                     }
+                }
+            }
+
+            TicketAvailabilityStatus status = null;
+            if (totalCapacity > 0) {
+                if (totalSold >= totalCapacity) {
+                    status = TicketAvailabilityStatus.SOLD_OUT;
+                } else if (totalSold * 10 >= totalCapacity * 9) {
+                    status = TicketAvailabilityStatus.ALMOST_SOLD_OUT;
                 }
             }
 
@@ -244,8 +267,8 @@ public class EventService {
 
     private String mapSortField(String sortBy) {
         return switch (sortBy.toLowerCase()) {
-            case "startdatetime", "starttime", "start", "neardate" -> "startDatetime";
-            case "enddatetime", "endtime", "end" -> "endDatetime";
+            case "startdatetime", "starttime", "start", "neardate" -> "createdAt";
+            case "enddatetime", "endtime", "end" -> "createdAt";
             case "totalseats", "seats" -> "totalSeats";
             case "eventname", "name" -> "eventName";
             case "popular", "trending" -> "viewCount";
@@ -276,7 +299,7 @@ public class EventService {
             if (recentViews > 0) return;
         }
 
-        com.capstone.inventoryservice.model.entity.EventView view = com.capstone.inventoryservice.model.entity.EventView.builder()
+        EventView view = EventView.builder()
             .event(event)
             .userId(userId)
             .build();
@@ -284,10 +307,6 @@ public class EventService {
     }
 
     public EventResponse createEvent(CreateEventRequest request) {
-
-        if (request.getEndDatetime().isBefore(request.getStartDatetime())) {
-            throw new AppException(ErrorCode.BAD_REQUEST, "End datetime must be after start datetime");
-        }
 
         Long orgId = jwtUtil.getDataFromAuth().organizationId();
         if(orgId == null) {
@@ -299,8 +318,6 @@ public class EventService {
                 .description(request.getDescription())
                 .venue(request.getVenue())
                 .address(request.getAddress())
-                .startDatetime(request.getStartDatetime())
-                .endDatetime(request.getEndDatetime())
                 .eventType(request.getEventType())
                 .totalSeats(request.getTotalSeats())
                 .organizerId(orgId)
@@ -312,34 +329,62 @@ public class EventService {
                 .longitude(request.getLongitude())
                 .build();
 
-        if (request.getTicketTypes() != null && !request.getTicketTypes().isEmpty()) {
-            for (CreateTicketTypeRequest ticketRequest : request.getTicketTypes()) {
-                TicketType ticketType = TicketType.builder()
-                        .typeName(ticketRequest.getTypeName())
-                        .description(ticketRequest.getDescription())
-                        .price(ticketRequest.getPrice())
-                        .takePlaceTime(ticketRequest.getTakePlaceTime())
-                        .quantityTotal(ticketRequest.getQuantityTotal())
-                        .quantitySold(0)
-                        .minPurchase(ticketRequest.getMinPurchase())
-                        .maxPurchase(ticketRequest.getMaxPurchase())
-                        .saleStartDate(ticketRequest.getSaleStartDate())
-                        .saleEndDate(ticketRequest.getSaleEndDate())
-                        .ticketTypeStatus(ticketRequest.getTicketTypeStatus())
+        if (request.getShowtimes() != null && !request.getShowtimes().isEmpty()) {
+            for (CreateShowtimeRequest showtimeRequest : request.getShowtimes()) {
+                if (showtimeRequest.getEndDatetime().isBefore(showtimeRequest.getStartDatetime())) {
+                    throw new AppException(ErrorCode.BAD_REQUEST, "Showtime end datetime must be after start datetime");
+                }
+
+                Showtime showtime = Showtime.builder()
                         .event(event)
+                        .startDatetime(showtimeRequest.getStartDatetime())
+                        .endDatetime(showtimeRequest.getEndDatetime())
+                        .venue(showtimeRequest.getVenue())
+                        .address(showtimeRequest.getAddress())
                         .build();
 
-                event.getTicketTypes().add(ticketType);
+                if (showtimeRequest.getWardCode() != null) {
+                    showtime.setWard(locationUtil.getWardByCode(showtimeRequest.getWardCode()));
+                }
+                if (showtimeRequest.getProvinceCode() != null) {
+                    showtime.setProvince(locationUtil.getProvinceByCode(showtimeRequest.getProvinceCode()));
+                }
 
+                if (showtimeRequest.getTicketTypes() != null && !showtimeRequest.getTicketTypes().isEmpty()) {
+                    for (CreateTicketTypeRequest ticketRequest : showtimeRequest.getTicketTypes()) {
+                        TicketType ticketType = TicketType.builder()
+                                .typeName(ticketRequest.getTypeName())
+                                .description(ticketRequest.getDescription())
+                                .price(ticketRequest.getPrice())
+                                .quantityTotal(ticketRequest.getQuantityTotal())
+                                .quantitySold(0)
+                                .minPurchase(ticketRequest.getMinPurchase())
+                                .maxPurchase(ticketRequest.getMaxPurchase())
+                                .saleStartDate(ticketRequest.getSaleStartDate())
+                                .saleEndDate(ticketRequest.getSaleEndDate())
+                                .ticketTypeStatus(ticketRequest.getTicketTypeStatus())
+                                .showtime(showtime)
+                                .build();
+
+                        showtime.getTicketTypes().add(ticketType);
+                    }
+                }
+
+                event.getShowtimes().add(showtime);
+            }
+        }
+        Event savedEvent = eventRepository.save(event);
+
+        for (Showtime s : savedEvent.getShowtimes()) {
+            for (TicketType t : s.getTicketTypes()) {
                 eventPublisher.publishEvent(
                         new TicketCreatedEvent(
-                                ticketType.getId(),
-                                ticketType.getQuantityTotal()
+                                t.getId(),
+                                t.getQuantityTotal()
                         )
                 );
             }
         }
-        Event savedEvent = eventRepository.save(event);
 
         return convertToDTO(eventRepository.findByIdWithDetails(savedEvent.getId()).orElse(savedEvent));
     }
@@ -359,15 +404,6 @@ public class EventService {
         }
         if (request.getAddress() != null) {
             event.setAddress(request.getAddress());
-        }
-        if (request.getStartDatetime() != null) {
-            event.setStartDatetime(request.getStartDatetime());
-        }
-        if (request.getEndDatetime() != null) {
-            if (request.getEndDatetime().isBefore(event.getStartDatetime())) {
-                throw new AppException(ErrorCode.BAD_REQUEST, "End datetime must be after start datetime");
-            }
-            event.setEndDatetime(request.getEndDatetime());
         }
         if (request.getIsCancelled() != null) {
             event.setIsCancelled(request.getIsCancelled());
@@ -455,7 +491,7 @@ public class EventService {
             List<Event> allEvents = eventRepository.findByOrganizerId(organizerId);
             List<Event> filtered = allEvents.stream()
                     .filter(e -> e.getEventStatus() == eventStatus)
-                    .collect(Collectors.toList());
+                    .toList();
 
             int start = (int) pageable.getOffset();
             int end = Math.min((start + pageable.getPageSize()), filtered.size());
@@ -472,10 +508,10 @@ public class EventService {
     }
 
     private EventResponse convertToDTO(Event event) {
-        List<TicketTypeResponse> ticketTypeDTOs = null;
-        if (event.getTicketTypes() != null) {
-            ticketTypeDTOs = event.getTicketTypes().stream()
-                    .map(ticketTypeMapper::convertToDTO)
+        List<ShowtimeResponse> showtimeDTOs = null;
+        if (event.getShowtimes() != null) {
+            showtimeDTOs = event.getShowtimes().stream()
+                    .map(this::convertShowtimeToDTO)
                     .toList();
         }
         List<ReviewResponse> reviewDTOs = null;
@@ -497,8 +533,6 @@ public class EventService {
                 .description(event.getDescription())
                 .venue(event.getVenue())
                 .address(event.getFullAddress())
-                .startDatetime(event.getStartDatetime())
-                .endDatetime(event.getEndDatetime())
                 .eventStatus(event.getEventStatus())
                 .eventType(event.getEventType())
                 .bannerImage(event.getBannerImage())
@@ -509,8 +543,31 @@ public class EventService {
                 .category(event.getCategory())
                 .latitude(event.getLatitude())
                 .longitude(event.getLongitude())
-                .ticketTypes(ticketTypeDTOs)
+                .showtimes(showtimeDTOs)
                 .reviews(reviewDTOs)
+                .build();
+    }
+
+    private ShowtimeResponse convertShowtimeToDTO(Showtime showtime) {
+        List<TicketTypeResponse> ticketTypeDTOs = null;
+        if (showtime.getTicketTypes() != null) {
+            ticketTypeDTOs = showtime.getTicketTypes().stream()
+                    .map(ticketTypeMapper::convertToDTO)
+                    .toList();
+        }
+
+        String provinceName = showtime.getProvince() != null ? showtime.getProvince().getName() : null;
+
+        return ShowtimeResponse.builder()
+                .showtimeId(showtime.getId())
+                .startDatetime(showtime.getStartDatetime())
+                .endDatetime(showtime.getEndDatetime())
+                .venue(showtime.getVenue())
+                .address(showtime.getAddress())
+                .fullAddress(showtime.getFullAddress())
+                .provinceName(provinceName)
+                .isCancelled(showtime.getIsCancelled())
+                .ticketTypes(ticketTypeDTOs)
                 .build();
     }
 
@@ -616,7 +673,18 @@ public class EventService {
 
         List<Event> scoredCandidates = candidates.stream()
                 .filter(e -> !knownEventIds.contains(e.getId()))
-                .filter(e -> e.getEndDatetime() == null || e.getEndDatetime().isAfter(now))
+                .filter(e -> {
+                    LocalDateTime latestEnd = null;
+                    if (e.getShowtimes() != null) {
+                        for (Showtime s : e.getShowtimes()) {
+                            if (Boolean.TRUE.equals(s.getIsCancelled())) continue;
+                            if (s.getEndDatetime() != null && (latestEnd == null || s.getEndDatetime().isAfter(latestEnd))) {
+                                latestEnd = s.getEndDatetime();
+                            }
+                        }
+                    }
+                    return latestEnd == null || latestEnd.isAfter(now);
+                })
                 .filter(e -> !Boolean.TRUE.equals(e.getIsCancelled()))
                 .map(e -> {
                     int score = 0;

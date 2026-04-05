@@ -21,8 +21,6 @@ public class EventResponse {
     private String description;
     private String venue;
     private String address;
-    private LocalDateTime startDatetime;
-    private LocalDateTime endDatetime;
     private EventStatus eventStatus;
     private EventType eventType;
     private String bannerImage;
@@ -33,6 +31,6 @@ public class EventResponse {
     private EventCategory category;
     private BigDecimal latitude;
     private BigDecimal longitude;
-    private List<TicketTypeResponse> ticketTypes;
+    private List<ShowtimeResponse> showtimes;
     private List<ReviewResponse> reviews;
 }

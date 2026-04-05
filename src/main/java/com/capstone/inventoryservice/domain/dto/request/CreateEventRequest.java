@@ -2,11 +2,11 @@ package com.capstone.inventoryservice.domain.dto.request;
 
 import com.capstone.inventoryservice.model.enums.EventType;
 import com.capstone.inventoryservice.model.enums.EventCategory;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter @Setter
@@ -31,13 +31,6 @@ public class CreateEventRequest {
 
     private String address;
 
-    @NotNull(message = "Start datetime is required")
-    @Future(message = "Start datetime must be in the future")
-    private LocalDateTime startDatetime;
-
-    @NotNull(message = "End datetime is required")
-    private LocalDateTime endDatetime;
-
     @NotNull(message = "Event type is required")
     private EventType eventType;
 
@@ -54,5 +47,7 @@ public class CreateEventRequest {
     @NotNull(message = "Category is required")
     private EventCategory category;
 
-    private List<CreateTicketTypeRequest> ticketTypes;
+    @Valid
+    @NotEmpty(message = "At least one showtime is required")
+    private List<CreateShowtimeRequest> showtimes;
 }

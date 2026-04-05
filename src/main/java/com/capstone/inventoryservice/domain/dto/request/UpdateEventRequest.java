@@ -2,10 +2,11 @@ package com.capstone.inventoryservice.domain.dto.request;
 
 import com.capstone.inventoryservice.model.enums.EventType;
 import com.capstone.inventoryservice.model.enums.EventCategory;
+import jakarta.validation.Valid;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter @Setter
 @NoArgsConstructor
@@ -16,8 +17,6 @@ public class UpdateEventRequest {
     private String description;
     private String venue;
     private String address;
-    private LocalDateTime startDatetime;
-    private LocalDateTime endDatetime;
     private Boolean isCancelled;
     private EventType eventType;
     private Integer totalSeats;
@@ -25,5 +24,7 @@ public class UpdateEventRequest {
     private EventCategory category;
     private BigDecimal latitude;
     private BigDecimal longitude;
-}
 
+    @Valid
+    private List<UpdateShowtimeRequest> showtimes;
+}

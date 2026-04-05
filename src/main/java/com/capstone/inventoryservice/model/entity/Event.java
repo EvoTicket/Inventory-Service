@@ -8,7 +8,6 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -45,12 +44,6 @@ public class Event {
     @JoinColumn(name = "province_code", referencedColumnName = "code",  nullable = false)
     private Province province;
 
-    @Column(name = "start_datetime")
-    private LocalDateTime startDatetime;
-
-    @Column(name = "end_datetime")
-    private LocalDateTime endDatetime;
-
     @Column(name = "is_cancelled")
     @Builder.Default
     private Boolean isCancelled = false;
@@ -78,13 +71,13 @@ public class Event {
     @Column(name = "category")
     private com.capstone.inventoryservice.model.enums.EventCategory category;
 
-    @Formula("(SELECT MIN(t.price) FROM inventory_service.ticket_types t WHERE t.event_id = id)")
+    @Formula("(SELECT MIN(t.price) FROM inventory_service.ticket_types t INNER JOIN inventory_service.showtimes s ON t.showtime_id = s.id WHERE s.event_id = id)")
     private BigDecimal minPrice;
 
-    @Formula("(SELECT COALESCE(SUM(t.quantity_sold), 0) FROM inventory_service.ticket_types t WHERE t.event_id = id)")
+    @Formula("(SELECT COALESCE(SUM(t.quantity_sold), 0) FROM inventory_service.ticket_types t INNER JOIN inventory_service.showtimes s ON t.showtime_id = s.id WHERE s.event_id = id)")
     private Integer totalQuantitySold;
 
-    @Formula("(SELECT COALESCE(SUM(t.quantity_total), 0) FROM inventory_service.ticket_types t WHERE t.event_id = id)")
+    @Formula("(SELECT COALESCE(SUM(t.quantity_total), 0) FROM inventory_service.ticket_types t INNER JOIN inventory_service.showtimes s ON t.showtime_id = s.id WHERE s.event_id = id)")
     private Integer totalQuantityTotal;
 
     @Formula("(SELECT COUNT(v.id) FROM inventory_service.event_views v WHERE v.event_id = id)")
@@ -92,7 +85,7 @@ public class Event {
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private Set<TicketType> ticketTypes = new HashSet<>();
+    private Set<Showtime> showtimes = new HashSet<>();
 
     private BigDecimal latitude;
 
@@ -134,28 +127,52 @@ public class Event {
 
         LocalDateTime now = LocalDateTime.now();
 
-        if (this.endDatetime != null && now.isAfter(this.endDatetime)) {
+        LocalDateTime earliestStart = null;
+        LocalDateTime latestEnd = null;
+
+        if (this.showtimes != null && !this.showtimes.isEmpty()) {
+            for (Showtime s : this.showtimes) {
+                if (Boolean.TRUE.equals(s.getIsCancelled())) continue;
+                if (s.getStartDatetime() != null) {
+                    if (earliestStart == null || s.getStartDatetime().isBefore(earliestStart)) {
+                        earliestStart = s.getStartDatetime();
+                    }
+                }
+                if (s.getEndDatetime() != null) {
+                    if (latestEnd == null || s.getEndDatetime().isAfter(latestEnd)) {
+                        latestEnd = s.getEndDatetime();
+                    }
+                }
+            }
+        }
+
+        if (latestEnd != null && now.isAfter(latestEnd)) {
             return EventStatus.COMPLETED;
         }
 
-        if (this.startDatetime != null && this.endDatetime != null &&
-            !now.isBefore(this.startDatetime) && !now.isAfter(this.endDatetime)) {
+        if (earliestStart != null && latestEnd != null &&
+            !now.isBefore(earliestStart) && !now.isAfter(latestEnd)) {
             return EventStatus.ON_GOING;
         }
 
         LocalDateTime minSaleStart = null;
         LocalDateTime maxSaleEnd = null;
 
-        if (this.ticketTypes != null && !this.ticketTypes.isEmpty()) {
-            for (TicketType t : this.ticketTypes) {
-                if (t.getSaleStartDate() != null) {
-                    if (minSaleStart == null || t.getSaleStartDate().isBefore(minSaleStart)) {
-                        minSaleStart = t.getSaleStartDate();
-                    }
-                }
-                if (t.getSaleEndDate() != null) {
-                    if (maxSaleEnd == null || t.getSaleEndDate().isAfter(maxSaleEnd)) {
-                        maxSaleEnd = t.getSaleEndDate();
+        if (this.showtimes != null && !this.showtimes.isEmpty()) {
+            for (Showtime s : this.showtimes) {
+                if (Boolean.TRUE.equals(s.getIsCancelled())) continue;
+                if (s.getTicketTypes() != null && !s.getTicketTypes().isEmpty()) {
+                    for (TicketType t : s.getTicketTypes()) {
+                        if (t.getSaleStartDate() != null) {
+                            if (minSaleStart == null || t.getSaleStartDate().isBefore(minSaleStart)) {
+                                minSaleStart = t.getSaleStartDate();
+                            }
+                        }
+                        if (t.getSaleEndDate() != null) {
+                            if (maxSaleEnd == null || t.getSaleEndDate().isAfter(maxSaleEnd)) {
+                                maxSaleEnd = t.getSaleEndDate();
+                            }
+                        }
                     }
                 }
             }
@@ -170,8 +187,8 @@ public class Event {
             return EventStatus.ON_SALE;
         }
 
-        if (maxSaleEnd != null && this.startDatetime != null &&
-            now.isAfter(maxSaleEnd) && now.isBefore(this.startDatetime)) {
+        if (maxSaleEnd != null && earliestStart != null &&
+            now.isAfter(maxSaleEnd) && now.isBefore(earliestStart)) {
             return EventStatus.SALE_CLOSED;
         }
 
