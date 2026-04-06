@@ -15,6 +15,10 @@ import java.util.List;
 
 public class EventSpecification {
 
+    private EventSpecification() {
+        throw new UnsupportedOperationException("Utility class");
+    }
+
     public static Specification<Event> withFilters(EventFilterRequest filter) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();

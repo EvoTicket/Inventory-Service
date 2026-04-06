@@ -51,12 +51,13 @@ public class TicketRedisInitializer {
                         "TicketType not found: " + ticketTypeId
                 ));
 
-        long available = ticket.getQuantityTotal() - ticket.getQuantitySold();
+        int available = ticket.getQuantityTotal() - ticket.getQuantitySold();
 
         String availableKey = "ticket:available:" + ticketTypeId;
         String reservedKey = "ticket:reserved:" + ticketTypeId;
 
-        if (stringRedisTemplate.hasKey(availableKey)) {
+        boolean hasAvailable = stringRedisTemplate.hasKey(availableKey);
+        if (hasAvailable) {
             return;
         }
 

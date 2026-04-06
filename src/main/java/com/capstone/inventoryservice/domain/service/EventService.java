@@ -33,7 +33,6 @@ import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.repository.EventRepository;
 import com.capstone.inventoryservice.model.repository.EventViewRepository;
-import com.capstone.inventoryservice.model.repository.ShowtimeRepository;
 import com.capstone.inventoryservice.model.repository.UserFavoriteEventRepository;
 import com.capstone.inventoryservice.security.JwtUtil;
 import com.capstone.inventoryservice.domain.specification.EventSpecification;
@@ -61,7 +60,6 @@ import java.util.stream.Collectors;
 public class EventService {
 
     private final EventRepository eventRepository;
-    private final ShowtimeRepository showtimeRepository;
     private final EventViewRepository eventViewRepository;
     private final UserFavoriteEventRepository userFavoriteEventRepository;
     private final JwtUtil jwtUtil;
@@ -70,7 +68,7 @@ public class EventService {
     private final LocationUtil locationUtil;
     private final EventUtil eventUtil;
     private final TicketTypeMapper ticketTypeMapper;
-    private final EventImageUploadService eventImageUploadService;
+    private final UploadService uploadService;
     private final ApplicationEventPublisher eventPublisher;
     private final ReviewMapper reviewMapper;
 
@@ -163,20 +161,6 @@ public class EventService {
                 }
             }
 
-            BigDecimal floorPrice = BigDecimal.ZERO;
-            if (event.getShowtimes() != null) {
-                for (Showtime s : event.getShowtimes()) {
-                    if (Boolean.TRUE.equals(s.getIsCancelled())) continue;
-                    if (s.getTicketTypes() != null) {
-                        for (TicketType t : s.getTicketTypes()) {
-                            if (t.getPrice() != null && (floorPrice.compareTo(BigDecimal.ZERO) == 0 || t.getPrice().compareTo(floorPrice) < 0)) {
-                                floorPrice = t.getPrice();
-                            }
-                        }
-                    }
-                }
-            }
-
             EventVolumeResponse volumeData = finalVolumeMap.get(event.getId());
             BigDecimal volume24h = volumeData != null && volumeData.getVolume24h() != null
                     ? volumeData.getVolume24h()
@@ -185,38 +169,16 @@ public class EventService {
                     ? volumeData.getHotness()
                     : 0.0;
 
-            int totalSold = 0;
-            int totalCapacity = 0;
-            if (event.getShowtimes() != null) {
-                for (Showtime s : event.getShowtimes()) {
-                    if (Boolean.TRUE.equals(s.getIsCancelled())) continue;
-                    if (s.getTicketTypes() != null) {
-                        for (TicketType t : s.getTicketTypes()) {
-                            totalSold += t.getQuantitySold() != null ? t.getQuantitySold() : 0;
-                            totalCapacity += t.getQuantityTotal() != null ? t.getQuantityTotal() : 0;
-                        }
-                    }
-                }
-            }
-
-            TicketAvailabilityStatus status = null;
-            if (totalCapacity > 0) {
-                if (totalSold >= totalCapacity) {
-                    status = TicketAvailabilityStatus.SOLD_OUT;
-                } else if (totalSold * 10 >= totalCapacity * 9) {
-                    status = TicketAvailabilityStatus.ALMOST_SOLD_OUT;
-                }
-            }
 
             return TrendingEventResponse.builder()
                     .id(event.getId())
                     .eventName(event.getEventName())
                     .thumbnailImage(event.getThumbnailImage())
                     .organizerName(organizerName)
-                    .floorPrice(floorPrice)
+                    .floorPrice(event.getFloorPrice())
                     .volume24h(volume24h)
                     .hotness(hotness)
-                    .ticketAvailabilityStatus(status)
+                    .ticketAvailabilityStatus(event.getTicketAvailabilityStatus())
                     .build();
         });
 
@@ -379,21 +341,21 @@ public class EventService {
         List<CompletableFuture<Void>> uploadTasks = new ArrayList<>();
         if (bannerFile != null && !bannerFile.isEmpty()) {
             try {
-                uploadTasks.add(eventImageUploadService.uploadImageAsync(savedEvent, bannerFile.getBytes(), "banner"));
+                uploadTasks.add(uploadService.uploadImageAsync(savedEvent, bannerFile.getBytes(), "banner"));
             } catch (IOException e) {
                 throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh banner: " + e.getMessage());
             }
         }
         if (thumbnailFile != null && !thumbnailFile.isEmpty()) {
             try {
-                uploadTasks.add(eventImageUploadService.uploadImageAsync(savedEvent, thumbnailFile.getBytes(), "thumbnail"));
+                uploadTasks.add(uploadService.uploadImageAsync(savedEvent, thumbnailFile.getBytes(), "thumbnail"));
             } catch (IOException e) {
                 throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh thumbnail: " + e.getMessage());
             }
         }
         if (seatMapFile != null && !seatMapFile.isEmpty()) {
             try {
-                uploadTasks.add(eventImageUploadService.uploadImageAsync(savedEvent, seatMapFile.getBytes(), "seat_map"));
+                uploadTasks.add(uploadService.uploadImageAsync(savedEvent, seatMapFile.getBytes(), "seat_map"));
             } catch (IOException e) {
                 throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh sơ đồ chỗ: " + e.getMessage());
             }
@@ -596,7 +558,9 @@ public class EventService {
         try {
             var auth = jwtUtil.getDataFromAuth();
             if (auth != null) userId = auth.userId();
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            log.info("User not authenticated, returning fallback recommendations");
+        }
 
         if (userId == null) {
             return getFallbackRecommendations(limit);
@@ -621,10 +585,10 @@ public class EventService {
             return getFallbackRecommendations(limit);
         }
 
-        Map<EventCategory, Integer> categoryScores = new HashMap<>();
+        Map<EventCategory, Integer> categoryScores = new EnumMap<>(EventCategory.class);
         Map<String, Integer> provinceScores = new HashMap<>();
         Map<Long, Integer> organizerScores = new HashMap<>();
-        Map<EventType, Integer> eventTypeScores = new HashMap<>();
+        Map<EventType, Integer> eventTypeScores = new EnumMap<>(EventType.class);
 
         List<Event> interactedEvents = eventRepository.findAllById(knownEventIds);
 
@@ -666,18 +630,7 @@ public class EventService {
 
         List<Event> scoredCandidates = candidates.stream()
                 .filter(e -> !knownEventIds.contains(e.getId()))
-                .filter(e -> {
-                    LocalDateTime latestEnd = null;
-                    if (e.getShowtimes() != null) {
-                        for (Showtime s : e.getShowtimes()) {
-                            if (Boolean.TRUE.equals(s.getIsCancelled())) continue;
-                            if (s.getEndDatetime() != null && (latestEnd == null || s.getEndDatetime().isAfter(latestEnd))) {
-                                latestEnd = s.getEndDatetime();
-                            }
-                        }
-                    }
-                    return latestEnd == null || latestEnd.isAfter(now);
-                })
+                .filter(e -> e.getLatestEnd() == null || e.getLatestEnd().isAfter(now))
                 .filter(e -> !Boolean.TRUE.equals(e.getIsCancelled()))
                 .map(e -> {
                     int score = 0;

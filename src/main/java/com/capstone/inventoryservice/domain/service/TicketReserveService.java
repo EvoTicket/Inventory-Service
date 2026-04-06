@@ -28,7 +28,8 @@ public class TicketReserveService {
 
     public void reserveOrThrow(Long ticketTypeId, long qty) {
         String availableKey = "ticket:available:" + ticketTypeId;
-        if (!stringRedisTemplate.hasKey(availableKey)) {
+        boolean hasKey = stringRedisTemplate.hasKey(availableKey);
+        if (!hasKey) {
             ticketRedisInitializer.initFromDB(ticketTypeId);
         }
 

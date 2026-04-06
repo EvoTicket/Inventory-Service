@@ -3,14 +3,19 @@ package com.capstone.inventoryservice.model.entity;
 import com.capstone.inventoryservice.model.enums.EventCategory;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
+import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
 import jakarta.persistence.*;
 import org.hibernate.annotations.Formula;
 import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 @Entity
 @Table(name = "events")
@@ -119,11 +124,114 @@ public class Event {
         updatedAt = LocalDateTime.now();
     }
 
+    @Transient
     public String getFullAddress() {
         if (ward != null && province != null) {
             return address + ", " + ward.getName() + ", " + province.getName();
         }
         return address;
+    }
+
+    @Transient
+    private Stream<TicketType> streamTicketTypes() {
+        if (showtimes == null) return Stream.empty();
+
+        return showtimes.stream()
+                .filter(s -> !Boolean.TRUE.equals(s.getIsCancelled()))
+                .filter(s -> s.getTicketTypes() != null)
+                .flatMap(s -> s.getTicketTypes().stream());
+    }
+
+    @Transient
+    public int getTotalSold() {
+        return streamTicketTypes()
+                .map(t -> t.getQuantitySold() != null ? t.getQuantitySold() : 0)
+                .mapToInt(Integer::intValue)
+                .sum();
+    }
+
+    @Transient
+    public TicketAvailabilityStatus getTicketAvailabilityStatus() {
+        int totalSold = getTotalSold();
+        int totalCapacity = getTotalCapacity();
+
+        if (totalSold >= totalCapacity) {
+            return TicketAvailabilityStatus.SOLD_OUT;
+        }
+
+        if (totalSold * 10 >= totalCapacity * 9) {
+            return TicketAvailabilityStatus.ALMOST_SOLD_OUT;
+        }
+
+        return TicketAvailabilityStatus.AVAILABLE;
+    }
+
+    @Transient
+    public int getTotalCapacity() {
+        return streamTicketTypes()
+                .map(t -> t.getQuantityTotal() != null ? t.getQuantityTotal() : 0)
+                .mapToInt(Integer::intValue)
+                .sum();
+    }
+
+    @Transient
+    private LocalDateTime getShowtimeDate(
+            Function<Showtime, LocalDateTime> mapper,
+            Comparator<LocalDateTime> comparator) {
+
+        if (showtimes == null) return null;
+
+        return showtimes.stream()
+                .filter(s -> !Boolean.TRUE.equals(s.getIsCancelled()))
+                .map(mapper)
+                .filter(Objects::nonNull)
+                .min(comparator)
+                .orElse(null);
+    }
+
+    @Transient
+    public LocalDateTime getEarliestStart() {
+        return getShowtimeDate(
+                Showtime::getStartDatetime,
+                Comparator.naturalOrder()
+        );
+    }
+
+    @Transient
+    public LocalDateTime getLatestEnd() {
+        return getShowtimeDate(
+                Showtime::getEndDatetime,
+                Comparator.reverseOrder()
+        );
+    }
+
+    @Transient
+    private LocalDateTime getSaleDate(Function<TicketType, LocalDateTime> mapper,
+                                      Comparator<LocalDateTime> comparator) {
+
+        if (showtimes == null) return null;
+
+        return streamTicketTypes()
+                .map(mapper)
+                .filter(Objects::nonNull)
+                .min(comparator)
+                .orElse(null);
+    }
+
+    @Transient
+    public LocalDateTime getMinSaleStart() {
+        return getSaleDate(
+                TicketType::getSaleStartDate,
+                Comparator.naturalOrder()
+        );
+    }
+
+    @Transient
+    public LocalDateTime getMaxSaleEnd() {
+        return getSaleDate(
+                TicketType::getSaleEndDate,
+                Comparator.reverseOrder()
+        );
     }
 
     @Transient
@@ -134,71 +242,41 @@ public class Event {
 
         LocalDateTime now = LocalDateTime.now();
 
-        LocalDateTime earliestStart = null;
-        LocalDateTime latestEnd = null;
-
-        if (this.showtimes != null && !this.showtimes.isEmpty()) {
-            for (Showtime s : this.showtimes) {
-                if (Boolean.TRUE.equals(s.getIsCancelled())) continue;
-                if (s.getStartDatetime() != null) {
-                    if (earliestStart == null || s.getStartDatetime().isBefore(earliestStart)) {
-                        earliestStart = s.getStartDatetime();
-                    }
-                }
-                if (s.getEndDatetime() != null) {
-                    if (latestEnd == null || s.getEndDatetime().isAfter(latestEnd)) {
-                        latestEnd = s.getEndDatetime();
-                    }
-                }
-            }
-        }
-
-        if (latestEnd != null && now.isAfter(latestEnd)) {
+        if (this.getLatestEnd() != null && now.isAfter(this.getLatestEnd())) {
             return EventStatus.COMPLETED;
         }
 
-        if (earliestStart != null && latestEnd != null &&
-            !now.isBefore(earliestStart) && !now.isAfter(latestEnd)) {
+        if (this.getEarliestStart() != null && this.getLatestEnd() != null &&
+            !now.isBefore(this.getEarliestStart()) && !now.isAfter(this.getLatestEnd())) {
             return EventStatus.ON_GOING;
         }
 
-        LocalDateTime minSaleStart = null;
-        LocalDateTime maxSaleEnd = null;
 
-        if (this.showtimes != null && !this.showtimes.isEmpty()) {
-            for (Showtime s : this.showtimes) {
-                if (Boolean.TRUE.equals(s.getIsCancelled())) continue;
-                if (s.getTicketTypes() != null && !s.getTicketTypes().isEmpty()) {
-                    for (TicketType t : s.getTicketTypes()) {
-                        if (t.getSaleStartDate() != null) {
-                            if (minSaleStart == null || t.getSaleStartDate().isBefore(minSaleStart)) {
-                                minSaleStart = t.getSaleStartDate();
-                            }
-                        }
-                        if (t.getSaleEndDate() != null) {
-                            if (maxSaleEnd == null || t.getSaleEndDate().isAfter(maxSaleEnd)) {
-                                maxSaleEnd = t.getSaleEndDate();
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if (minSaleStart != null && now.isBefore(minSaleStart)) {
+        if (this.getMinSaleStart() != null && now.isBefore(this.getMinSaleStart())) {
             return EventStatus.UPCOMING;
         }
 
-        if (minSaleStart != null && maxSaleEnd != null && 
-            !now.isBefore(minSaleStart) && !now.isAfter(maxSaleEnd)) {
+        if (this.getMinSaleStart() != null && this.getMaxSaleEnd() != null &&
+            !now.isBefore(this.getMinSaleStart()) && !now.isAfter(this.getMaxSaleEnd())) {
             return EventStatus.ON_SALE;
         }
 
-        if (maxSaleEnd != null && earliestStart != null &&
-            now.isAfter(maxSaleEnd) && now.isBefore(earliestStart)) {
+        if (this.getMaxSaleEnd() != null && this.getEarliestStart() != null &&
+            now.isAfter(this.getMaxSaleEnd()) && now.isBefore(this.getEarliestStart())) {
             return EventStatus.SALE_CLOSED;
         }
 
         return EventStatus.UPCOMING;
+    }
+
+    @Transient
+    public BigDecimal getFloorPrice() {
+        if (getShowtimes() == null) return BigDecimal.ZERO;
+
+        return streamTicketTypes()
+                .map(TicketType::getPrice)
+                .filter(Objects::nonNull)
+                .min(BigDecimal::compareTo)
+                .orElse(BigDecimal.ZERO);
     }
 }

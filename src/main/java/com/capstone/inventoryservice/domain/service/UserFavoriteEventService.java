@@ -6,7 +6,6 @@ import com.capstone.inventoryservice.domain.util.EventUtil;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
 import com.capstone.inventoryservice.model.entity.Event;
-import com.capstone.inventoryservice.model.entity.Showtime;
 import com.capstone.inventoryservice.model.entity.UserFavoriteEvent;
 import com.capstone.inventoryservice.model.repository.UserFavoriteEventRepository;
 import com.capstone.inventoryservice.security.JwtUtil;
@@ -16,9 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -54,7 +51,7 @@ public class UserFavoriteEventService {
 
         List<UserFavoriteEventResponse> content = page.getContent().stream()
                 .map(this::mapToDTO)
-                .collect(Collectors.toList());
+                .toList();
 
         return BasePageResponse.<UserFavoriteEventResponse>builder()
                 .content(content)
@@ -80,29 +77,14 @@ public class UserFavoriteEventService {
 
     private UserFavoriteEventResponse mapToDTO(UserFavoriteEvent entity) {
         Event event = entity.getEvent();
-
-        LocalDateTime earliestStart = null;
-        LocalDateTime latestEnd = null;
-        if (event.getShowtimes() != null) {
-            for (Showtime s : event.getShowtimes()) {
-                if (Boolean.TRUE.equals(s.getIsCancelled())) continue;
-                if (s.getStartDatetime() != null && (earliestStart == null || s.getStartDatetime().isBefore(earliestStart))) {
-                    earliestStart = s.getStartDatetime();
-                }
-                if (s.getEndDatetime() != null && (latestEnd == null || s.getEndDatetime().isAfter(latestEnd))) {
-                    latestEnd = s.getEndDatetime();
-                }
-            }
-        }
-
         return UserFavoriteEventResponse.builder()
                 .id(entity.getId())
                 .userId(entity.getUserId())
                 .eventId(event.getId())
                 .eventName(event.getEventName())
                 .eventDescription(event.getDescription())
-                .eventStartDate(earliestStart)
-                .eventEndDate(latestEnd)
+                .eventStartDate(event.getEarliestStart())
+                .eventEndDate(event.getLatestEnd())
                 .likedAt(entity.getLikedAt())
                 .build();
     }

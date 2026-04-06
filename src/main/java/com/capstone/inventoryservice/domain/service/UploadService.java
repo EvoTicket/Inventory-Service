@@ -16,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
-public class EventImageUploadService {
+public class UploadService {
 
     private final Cloudinary cloudinary;
 
