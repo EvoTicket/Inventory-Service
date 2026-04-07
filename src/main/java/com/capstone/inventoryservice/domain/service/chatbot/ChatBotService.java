@@ -9,7 +9,6 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.content.Media;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.google.genai.GoogleGenAiChatModel;
 import org.springframework.ai.google.genai.GoogleGenAiChatOptions;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TextSplitter;
@@ -82,7 +81,7 @@ public class ChatBotService {
 
             Object conversationId = userId != null ? userId : "anonymous";
 
-            String model = mediaList != null && !mediaList.isEmpty() ? "gemini-2.5-flash" : "gemini-3.1-flash-lite";
+            String model = mediaList != null && !mediaList.isEmpty() ? "gemini-3-flash-preview" : "gemini-3.1-flash-lite-preview";
 
             return chatClient.prompt()
                     .options(GoogleGenAiChatOptions.builder()

@@ -10,7 +10,6 @@ import com.capstone.inventoryservice.model.repository.ChatMessageRepository;
 import com.capstone.inventoryservice.security.JwtUtil;
 import com.cloudinary.Cloudinary;
 import lombok.RequiredArgsConstructor;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
@@ -25,11 +24,25 @@ public class ChatMessageService {
     private final Cloudinary cloudinary;
     private final JwtUtil jwtUtil;
 
-    @Async
+    public record ImageData(String filename, String contentType, byte[] bytes) {}
+
     public void saveUserMessage(Long userId,
                                 String message,
                                 List<MultipartFile> images) {
-        List<ChatMessageMedia> mediaList = uploadImagesAsync(images, userId)
+        List<ImageData> imageBytes = (images == null || images.isEmpty())
+                ? List.of()
+                : images.stream()
+                .filter(f -> !f.isEmpty())
+                .map(f -> {
+                    try {
+                        return new ImageData(f.getOriginalFilename(), f.getContentType(), f.getBytes());
+                    } catch (IOException e) {
+                        throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc file: " + e.getMessage());
+                    }
+                })
+                .toList();
+
+        List<ChatMessageMedia> mediaList = uploadImagesAsync(imageBytes, userId)
                 .thenApply(imagesStr -> {
                     List<ChatMessageMedia> media = new ArrayList<>();
                     if (imagesStr != null && !imagesStr.isEmpty()) {
@@ -54,7 +67,6 @@ public class ChatMessageService {
         );
     }
 
-    @Async
     public void saveAssistantMessage(Long userId,
                                      String message) {
         chatMessageRepository.save(ChatMessage.builder()
@@ -64,7 +76,7 @@ public class ChatMessageService {
                 .build());
     }
 
-    public CompletableFuture<List<String>> uploadImagesAsync(List<MultipartFile> images, Long userId) {
+    public CompletableFuture<List<String>> uploadImagesAsync(List<ImageData> images, Long userId) {
         if (images == null || images.isEmpty()) {
             return CompletableFuture.completedFuture(new ArrayList<>());
         }
@@ -72,8 +84,7 @@ public class ChatMessageService {
         String folder = "chat-bot/" + userId + "/images/";
 
         List<CompletableFuture<String>> futures = images.stream()
-                .filter(file -> !file.isEmpty())
-                .map(file -> CompletableFuture.supplyAsync(() -> {
+                .map(imageData -> CompletableFuture.supplyAsync(() -> {
                     try {
                         String publicId = UUID.randomUUID().toString();
                         Map<String, Object> options = new HashMap<>();
@@ -83,7 +94,7 @@ public class ChatMessageService {
                         options.put("overwrite", true);
 
                         @SuppressWarnings("unchecked")
-                        Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), options);
+                        Map<String, Object> uploadResult = cloudinary.uploader().upload(imageData.bytes(), options);
                         return (String) uploadResult.get("secure_url");
                     } catch (IOException e) {
                         throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể tải ảnh lên Cloudinary: " + e.getMessage());
