@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
@@ -28,19 +29,20 @@ public class ChatMessageService {
     public void saveUserMessage(Long userId,
                                 String message,
                                 List<MultipartFile> images) {
-        List<String> imagesStr;
-        try {
-            imagesStr = uploadImages(images, userId);
-        } catch (IOException ex) {
-            throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể tải ảnh lên Cloudinary: " + ex.getMessage());
-        }
-
-        List<ChatMessageMedia> mediaList = new ArrayList<>();
-        if (imagesStr != null && !imagesStr.isEmpty()) {
-            for (String url : imagesStr) {
-                mediaList.add(ChatMessageMedia.builder().url(url).build());
-            }
-        }
+        List<ChatMessageMedia> mediaList = uploadImagesAsync(images, userId)
+                .thenApply(imagesStr -> {
+                    List<ChatMessageMedia> media = new ArrayList<>();
+                    if (imagesStr != null && !imagesStr.isEmpty()) {
+                        for (String url : imagesStr) {
+                            media.add(ChatMessageMedia.builder().url(url).build());
+                        }
+                    }
+                    return media;
+                })
+                .exceptionally(ex -> {
+                    throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể tải ảnh lên Cloudinary: " + ex.getMessage());
+                })
+                .join();
 
         chatMessageRepository.save(
                 ChatMessage.builder()
@@ -62,35 +64,37 @@ public class ChatMessageService {
                 .build());
     }
 
-    @SuppressWarnings("unchecked")
-    public List<String> uploadImages(List<MultipartFile> images, Long userId) throws IOException {
+    public CompletableFuture<List<String>> uploadImagesAsync(List<MultipartFile> images, Long userId) {
         if (images == null || images.isEmpty()) {
-            return new ArrayList<>();
+            return CompletableFuture.completedFuture(new ArrayList<>());
         }
 
-        List<Map<String, Object>> uploadResults = new ArrayList<>();
         String folder = "chat-bot/" + userId + "/images/";
 
-        for (MultipartFile file : images) {
-            if (file.isEmpty()) {
-                continue;
-            }
+        List<CompletableFuture<String>> futures = images.stream()
+                .filter(file -> !file.isEmpty())
+                .map(file -> CompletableFuture.supplyAsync(() -> {
+                    try {
+                        String publicId = UUID.randomUUID().toString();
+                        Map<String, Object> options = new HashMap<>();
+                        options.put("resource_type", "image");
+                        options.put("folder", folder);
+                        options.put("public_id", publicId);
+                        options.put("overwrite", true);
 
-            String publicId = UUID.randomUUID().toString();
-
-            Map<String, Object> options = new HashMap<>();
-            options.put("resource_type", "image");
-            options.put("folder", folder);
-            options.put("public_id", publicId);
-            options.put("overwrite", true);
-
-            Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), options);
-            uploadResults.add(uploadResult);
-        }
-
-        return uploadResults.stream()
-                .map(result -> (String) result.get("secure_url"))
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), options);
+                        return (String) uploadResult.get("secure_url");
+                    } catch (IOException e) {
+                        throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể tải ảnh lên Cloudinary: " + e.getMessage());
+                    }
+                }))
                 .toList();
+
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .thenApply(v -> futures.stream()
+                        .map(CompletableFuture::join)
+                        .toList());
     }
 
     public List<ChatMessageResponse> getUserChatHistory() {

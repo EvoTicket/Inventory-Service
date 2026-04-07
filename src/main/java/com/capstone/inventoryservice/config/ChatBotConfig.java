@@ -13,11 +13,10 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.mongodb.atlas.MongoDBAtlasVectorStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
 @Configuration
-public class ChatBotConfig {
+public class  ChatBotConfig {
 
     static final String SYSTEM_PROMPT = """
             Bạn là trợ lý AI của EvoTicket — nền tảng mua bán vé sự kiện trực tuyến.
@@ -27,9 +26,17 @@ public class ChatBotConfig {
             - Trả lời bằng tiếng Việt, thân thiện và chuyên nghiệp.
             - Chỉ trả lời những câu hỏi liên quan đến sự kiện, vé, EvoTicket.
             - Nếu câu hỏi không liên quan, lịch sự từ chối và hướng dẫn lại.
-            - Không bịa đặt thông tin. Chỉ dùng dữ liệu được cung cấp trong context.
+            - Không bịa đặt thông tin. Luôn dùng tool để lấy dữ liệu thực từ hệ thống.
             - Dùng danh sách, bullet point khi liệt kê nhiều mục để dễ đọc.
             - Không tự nhận mình là AI model — hành xử như nhân viên hỗ trợ EvoTicket.
+
+            Hướng dẫn sử dụng Tool:
+            - Khi user hỏi về sự kiện, suất diễn, vé → BẮT BUỘC gọi tool phù hợp để lấy dữ liệu thực.
+            - Khi user hỏi về sự kiện yêu thích → gọi getUserFavoriteEvents với userId được cung cấp.
+            - Khi user tìm sự kiện theo tên → gọi searchEventsByName.
+            - Khi user muốn biết lịch diễn cụ thể → gọi getShowtimesByEventId với ID sự kiện.
+            - Khi user hỏi về vé của một sự kiện → gọi getTicketsByEventId với ID sự kiện.
+            - Có thể gọi nhiều tool liên tiếp để cung cấp câu trả lời đầy đủ.
             """;
 
     @Bean
@@ -53,18 +60,7 @@ public class ChatBotConfig {
     }
 
     @Bean
-    @Primary
-    public ChatClient chatClient(ChatClient.Builder builder, ChatMemory chatMemory) {
-        return builder
-                .defaultAdvisors(
-                        MessageChatMemoryAdvisor.builder(chatMemory).build()
-                )
-                .defaultSystem(SYSTEM_PROMPT)
-                .build();
-    }
-
-    @Bean("ragChatClient")
-    public ChatClient ragChatClient(ChatClient.Builder builder, ChatMemory chatMemory, VectorStore vectorStore) {
+    public ChatClient chatClient(ChatClient.Builder builder, ChatMemory chatMemory, VectorStore vectorStore) {
         return builder
                 .defaultAdvisors(
                         MessageChatMemoryAdvisor.builder(chatMemory).build(),
