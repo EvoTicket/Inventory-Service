@@ -50,7 +50,7 @@ public class EventSpecification {
                 List<Predicate> statusPredicates = new ArrayList<>();
                 LocalDateTime now = LocalDateTime.now();
 
-                Join<Event, Showtime> showtimeJoin = root.join("showtimes", JoinType.LEFT);
+                Join<Event, Showtime> showtimeJoin = root.join("showtime", JoinType.LEFT);
                 Join<Showtime, TicketType> ticketTypeJoin = showtimeJoin.join("ticketTypes", JoinType.LEFT);
 
                 for (EventStatus status : filter.getEventStatuses()) {

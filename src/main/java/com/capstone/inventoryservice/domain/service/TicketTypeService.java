@@ -54,6 +54,7 @@ public class TicketTypeService {
         List<ListTicketTypesInternalResponse.TicketDetailResponse> ticketDetails = new ArrayList<>();
         Long eventId = null;
         String eventName = null;
+        Long showtimeId = null;
 
         for (OrderItemRequest item : listItems) {
 
@@ -69,10 +70,13 @@ public class TicketTypeService {
             if (eventId == null) {
                 eventId = ticket.getShowtime().getEvent().getId();
                 eventName = ticket.getShowtime().getEvent().getEventName();
-            } else if (!eventId.equals(ticket.getShowtime().getEvent().getId())) {
+                showtimeId = ticket.getShowtime().getId();
+            } else if (!eventId.equals(ticket.getShowtime().getEvent().getId())
+                    && !showtimeId.equals(ticket.getShowtime().getId())
+            ) {
                 throw new AppException(
                         ErrorCode.BAD_REQUEST,
-                        "Các ticket phải thuộc cùng một sự kiện"
+                        "Các ticket phải thuộc cùng một sự kiện và lịch chiếu"
                 );
             }
 
@@ -90,6 +94,7 @@ public class TicketTypeService {
         return ListTicketTypesInternalResponse.builder()
                 .eventId(eventId)
                 .eventName(eventName)
+                .showtimeId(showtimeId)
                 .ticketDetails(ticketDetails)
                 .build();
     }

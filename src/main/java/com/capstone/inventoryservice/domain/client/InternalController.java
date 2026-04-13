@@ -7,7 +7,10 @@ import com.capstone.inventoryservice.domain.service.TicketTypeService;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
 import com.capstone.inventoryservice.model.entity.Event;
+import com.capstone.inventoryservice.model.entity.Showtime;
+import com.capstone.inventoryservice.model.entity.TicketType;
 import com.capstone.inventoryservice.model.repository.EventRepository;
+import com.capstone.inventoryservice.model.repository.TicketTypeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +26,7 @@ public class InternalController {
     private final TicketTypeService ticketTypeService;
     private final TicketReserveService ticketReserveService;
     private final EventRepository eventRepository;
+    private final TicketTypeRepository ticketTypeRepository;
     private final IAMFeignClient iamFeignClient;
 
     @PostMapping("/ticket-types/tickets")
@@ -59,12 +63,16 @@ public class InternalController {
         return ResponseEntity.ok(BaseResponse.ok(true));
     }
 
-    @GetMapping("/event/{eventId}")
-    public ResponseEntity<BaseResponse<EventDetailResponse>> getEventDetails(@PathVariable Long eventId){
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "event not found"));
+    @GetMapping("/event/{ticketTypeId}")
+    public ResponseEntity<BaseResponse<EventDetailInternalResponse>> getEventDetailsByTicketTypeId(
+            @PathVariable Long ticketTypeId
+    ){
+        TicketType ticketType = ticketTypeRepository.findById(ticketTypeId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "ticket type not found"));
+        Showtime showtime = ticketType.getShowtime();
+        Event event = ticketType.getShowtime().getEvent();
         String organizerName = iamFeignClient.getOrganizationById(event.getOrganizerId()).getOrganizationName();
-        EventDetailResponse eventDetailResponse = EventDetailResponse.toDto(event, organizerName);
-        return ResponseEntity.ok(BaseResponse.ok(eventDetailResponse));
+        EventDetailInternalResponse eventDetailInternalResponse = EventDetailInternalResponse.toDto(event, showtime, organizerName);
+        return ResponseEntity.ok(BaseResponse.ok(eventDetailInternalResponse));
     }
 }

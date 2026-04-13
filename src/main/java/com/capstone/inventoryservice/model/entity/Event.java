@@ -83,13 +83,13 @@ public class Event {
     @Column(name = "category")
     private EventCategory category;
 
-    @Formula("(SELECT MIN(t.price) FROM inventory_service.ticket_types t INNER JOIN inventory_service.showtimes s ON t.showtime_id = s.id WHERE s.event_id = id)")
+    @Formula("(SELECT MIN(t.price) FROM inventory_service.ticket_types t INNER JOIN inventory_service.showtime s ON t.showtime_id = s.id WHERE s.event_id = id)")
     private BigDecimal minPrice;
 
-    @Formula("(SELECT COALESCE(SUM(t.quantity_sold), 0) FROM inventory_service.ticket_types t INNER JOIN inventory_service.showtimes s ON t.showtime_id = s.id WHERE s.event_id = id)")
+    @Formula("(SELECT COALESCE(SUM(t.quantity_sold), 0) FROM inventory_service.ticket_types t INNER JOIN inventory_service.showtime s ON t.showtime_id = s.id WHERE s.event_id = id)")
     private Integer totalQuantitySold;
 
-    @Formula("(SELECT COALESCE(SUM(t.quantity_total), 0) FROM inventory_service.ticket_types t INNER JOIN inventory_service.showtimes s ON t.showtime_id = s.id WHERE s.event_id = id)")
+    @Formula("(SELECT COALESCE(SUM(t.quantity_total), 0) FROM inventory_service.ticket_types t INNER JOIN inventory_service.showtime s ON t.showtime_id = s.id WHERE s.event_id = id)")
     private Integer totalQuantityTotal;
 
     @Formula("(SELECT COUNT(v.id) FROM inventory_service.event_views v WHERE v.event_id = id)")
