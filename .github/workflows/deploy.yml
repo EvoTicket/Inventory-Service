@@ -160,9 +160,9 @@ jobs:
           echo "Blocker violations:     $BLOCKERS"
 
           FAILED=false
-          [ "$SECURITY"        != "1" ] && echo "❌ Security must be A (got $SECURITY)"               && FAILED=true
-          [ "$RELIABILITY"     != "1" ] && echo "❌ Reliability must be A (got $RELIABILITY)"         && FAILED=true
-          [ "$MAINTAINABILITY" != "1" ] && echo "❌ Maintainability must be A (got $MAINTAINABILITY)" && FAILED=true
+          [ "$SECURITY"        != "1.0" ] && echo "❌ Security must be A (got $SECURITY)"               && FAILED=true
+          [ "$RELIABILITY"     != "1.0" ] && echo "❌ Reliability must be A (got $RELIABILITY)"         && FAILED=true
+          [ "$MAINTAINABILITY" != "1.0" ] && echo "❌ Maintainability must be A (got $MAINTAINABILITY)" && FAILED=true
           [ "$BLOCKERS"        != "0" ] && echo "❌ Blocker violations must be 0 (got $BLOCKERS)"      && FAILED=true
 
           if [ "$FAILED" = "true" ]; then
