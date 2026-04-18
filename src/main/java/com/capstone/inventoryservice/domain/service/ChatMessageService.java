@@ -10,6 +10,7 @@ import com.capstone.inventoryservice.model.repository.ChatMessageRepository;
 import com.capstone.inventoryservice.security.JwtUtil;
 import com.cloudinary.Cloudinary;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
@@ -24,7 +25,34 @@ public class ChatMessageService {
     private final Cloudinary cloudinary;
     private final JwtUtil jwtUtil;
 
-    public record ImageData(String filename, String contentType, byte[] bytes) {}
+    public record ImageData(String filename, String contentType, byte[] bytes) {
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof ImageData(String filename1, String type, byte[] bytes1))) return false;
+            return filename.equals(filename1)
+                    && contentType.equals(type)
+                    && Arrays.equals(bytes, bytes1);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = filename.hashCode();
+            result = 31 * result + contentType.hashCode();
+            result = 31 * result + Arrays.hashCode(bytes);
+            return result;
+        }
+
+        @Override
+        public @NonNull String toString() {
+            return "ImageData[" +
+                    "filename=" + filename +
+                    ", contentType=" + contentType +
+                    ", bytes=" + Arrays.toString(bytes) +
+                    ']';
+        }
+    }
 
     public void saveUserMessage(Long userId,
                                 String message,
