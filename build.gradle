@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.3.1'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id "org.sonarqube" version "7.2.3.7755"
 }
 
 group = 'com.capstone'
@@ -26,6 +27,13 @@ repositories {
 
 ext {
 	set('springCloudVersion', "2023.0.3")
+}
+
+sonar {
+	properties {
+		property "sonar.projectKey", "EvoTicket_Inventory-Service_bb955368-8166-4831-8fb2-6cc39a3640de"
+		property "sonar.projectName", "Inventory-Service"
+	}
 }
 
 dependencies {
