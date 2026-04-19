@@ -130,3 +130,5 @@ logging:
         SQL: debug
         type:
           descriptor: trace
+  pattern:
+    level: "%5p [traceId=%X{traceId}, spanId=%X{spanId}]"
