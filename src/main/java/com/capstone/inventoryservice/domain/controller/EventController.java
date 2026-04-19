@@ -16,6 +16,8 @@ import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
 import com.capstone.inventoryservice.domain.service.EventService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -143,9 +145,20 @@ public class EventController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<BaseResponse<EventResponse>> createEvent(
             @Valid @RequestPart("event") CreateEventRequest request,
-            @RequestPart(value = "bannerImage", required = false) MultipartFile bannerImage,
-            @RequestPart(value = "thumbnailImage", required = false) MultipartFile thumbnailImage,
-            @RequestPart(value = "seatMapImage", required = false) MultipartFile seatMapImage
+            @RequestPart(value = "bannerImage", required = false)
+            @Parameter(description = "Banner image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    schema = @Schema(type = "string", format = "binary")))
+            MultipartFile bannerImage,
+
+            @RequestPart(value = "thumbnailImage", required = false)
+            @Parameter(description = "Thumbnail image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    schema = @Schema(type = "string", format = "binary")))
+            MultipartFile thumbnailImage,
+
+            @RequestPart(value = "seatMapImage", required = false)
+            @Parameter(description = "Seat map image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    schema = @Schema(type = "string", format = "binary")))
+            MultipartFile seatMapImage
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(BaseResponse.ok("tạo event thành công" ,eventService.createEvent(request, bannerImage, thumbnailImage, seatMapImage)));

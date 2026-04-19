@@ -1,0 +1,124 @@
+{
+  "eventName": "Concert - Taylor Swift Eras Tour",
+  "description": "Experience the ultimate Taylor Swift concert with all your favorite songs from the Eras Tour. This is a once-in-a-lifetime event featuring stunning production, special effects, and memorable performances.",
+  "venue": "Quốc lộ 1 Sports Complex",
+  "wardCode": 101,
+  "provinceCode": 1,
+  "address": "1234 Quốc lộ 1, District 1, Ho Chi Minh City",
+  "eventType": "OFFLINE",
+  "totalSeats": 10000,
+  "isFeatured": true,
+  "latitude": 10.7769,
+  "longitude": 106.7009,
+  "category": "LIVESTAGE",
+  "showtimes": [
+    {
+      "startDatetime": "2026-05-15T18:00:00",
+      "endDatetime": "2026-05-15T23:00:00",
+      "venue": "Quốc lộ 1 Sports Complex",
+      "address": "1234 Quốc lộ 1, District 1, Ho Chi Minh City",
+      "wardCode": 101,
+      "provinceCode": 1,
+      "ticketTypes": [
+        {
+          "typeName": "VIP Premium",
+          "description": "Premium seating with best view and exclusive merchandise",
+          "price": 2500000,
+          "quantityTotal": 500,
+          "minPurchase": 1,
+          "maxPurchase": 4,
+          "saleStartDate": "2026-04-01T00:00:00",
+          "saleEndDate": "2026-05-14T23:59:59",
+          "ticketTypeStatus": "AVAILABLE"
+        },
+        {
+          "typeName": "VIP Standard",
+          "description": "Good seating with excellent view",
+          "price": 1800000,
+          "quantityTotal": 1500,
+          "minPurchase": 1,
+          "maxPurchase": 6,
+          "saleStartDate": "2026-04-01T00:00:00",
+          "saleEndDate": "2026-05-14T23:59:59",
+          "ticketTypeStatus": "AVAILABLE"
+        },
+        {
+          "typeName": "General Admission",
+          "description": "Standard seating",
+          "price": 1000000,
+          "quantityTotal": 5000,
+          "minPurchase": 1,
+          "maxPurchase": 10,
+          "saleStartDate": "2026-04-01T00:00:00",
+          "saleEndDate": "2026-05-14T23:59:59",
+          "ticketTypeStatus": "AVAILABLE"
+        },
+        {
+          "typeName": "Economy",
+          "description": "Budget-friendly seating",
+          "price": 600000,
+          "quantityTotal": 3000,
+          "minPurchase": 1,
+          "maxPurchase": 8,
+          "saleStartDate": "2026-04-01T00:00:00",
+          "saleEndDate": "2026-05-14T23:59:59",
+          "ticketTypeStatus": "AVAILABLE"
+        }
+      ]
+    },
+    {
+      "startDatetime": "2026-05-16T18:00:00",
+      "endDatetime": "2026-05-16T23:00:00",
+      "venue": "Quốc lộ 1 Sports Complex",
+      "address": "1234 Quốc lộ 1, District 1, Ho Chi Minh City",
+      "wardCode": 101,
+      "provinceCode": 1,
+      "ticketTypes": [
+        {
+          "typeName": "VIP Premium",
+          "description": "Premium seating with best view and exclusive merchandise",
+          "price": 2500000,
+          "quantityTotal": 500,
+          "minPurchase": 1,
+          "maxPurchase": 4,
+          "saleStartDate": "2026-04-01T00:00:00",
+          "saleEndDate": "2026-05-15T23:59:59",
+          "ticketTypeStatus": "AVAILABLE"
+        },
+        {
+          "typeName": "VIP Standard",
+          "description": "Good seating with excellent view",
+          "price": 1800000,
+          "quantityTotal": 1500,
+          "minPurchase": 1,
+          "maxPurchase": 6,
+          "saleStartDate": "2026-04-01T00:00:00",
+          "saleEndDate": "2026-05-15T23:59:59",
+          "ticketTypeStatus": "AVAILABLE"
+        },
+        {
+          "typeName": "General Admission",
+          "description": "Standard seating",
+          "price": 1000000,
+          "quantityTotal": 5000,
+          "minPurchase": 1,
+          "maxPurchase": 10,
+          "saleStartDate": "2026-04-01T00:00:00",
+          "saleEndDate": "2026-05-15T23:59:59",
+          "ticketTypeStatus": "AVAILABLE"
+        },
+        {
+          "typeName": "Economy",
+          "description": "Budget-friendly seating",
+          "price": 600000,
+          "quantityTotal": 3000,
+          "minPurchase": 1,
+          "maxPurchase": 8,
+          "saleStartDate": "2026-04-01T00:00:00",
+          "saleEndDate": "2026-05-15T23:59:59",
+          "ticketTypeStatus": "AVAILABLE"
+        }
+      ]
+    }
+  ]
+}
