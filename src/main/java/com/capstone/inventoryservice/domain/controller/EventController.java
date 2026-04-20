@@ -144,7 +144,17 @@ public class EventController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<BaseResponse<EventResponse>> createEvent(
-            @Valid @RequestPart("event") CreateEventRequest request,
+            @Valid
+            @RequestPart("event")
+            @Parameter(
+                    description = "Event JSON",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = CreateEventRequest.class)
+                    )
+            )
+            CreateEventRequest request,
+
             @RequestPart(value = "bannerImage", required = false)
             @Parameter(description = "Banner image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
                     schema = @Schema(type = "string", format = "binary")))
