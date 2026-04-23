@@ -2,12 +2,11 @@ package com.capstone.inventoryservice.domain.controller;
 
 import com.capstone.inventoryservice.domain.dto.BaseResponse;
 import com.capstone.inventoryservice.domain.dto.response.ChatBotResponse;
-import com.capstone.inventoryservice.domain.dto.response.ChatMessageResponse;
 import com.capstone.inventoryservice.domain.service.chatbot.ChatBotService;
-import com.capstone.inventoryservice.domain.service.ChatMessageService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import lombok.RequiredArgsConstructor;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +19,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ChatBotController {
     private final ChatBotService chatBotService;
-    private final ChatMessageService chatMessageService;
 
     @PostMapping(value = "/ask", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<BaseResponse<ChatBotResponse>> smartChat(
@@ -42,7 +40,13 @@ public class ChatBotController {
     }
 
     @GetMapping("/history")
-    public ResponseEntity<BaseResponse<List<ChatMessageResponse>>> chatMessages(){
-        return ResponseEntity.ok(BaseResponse.ok(chatMessageService.getUserChatHistory()));
+    public ResponseEntity<BaseResponse<List<Message>>> chatMessages(){
+        return ResponseEntity.ok(BaseResponse.ok(chatBotService.getChatMessages()));
+    }
+
+    @PostMapping("/clear-history")
+    public ResponseEntity<BaseResponse<Boolean>> clearHistory() {
+        chatBotService.clearChatHistory();
+        return ResponseEntity.ok(BaseResponse.ok(true));
     }
 }

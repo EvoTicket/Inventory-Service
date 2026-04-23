@@ -1,12 +1,12 @@
 package com.capstone.inventoryservice.domain.service.chatbot;
 
-import com.capstone.inventoryservice.domain.service.ChatMessageService;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
 import com.capstone.inventoryservice.security.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.content.Media;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.google.genai.GoogleGenAiChatOptions;
@@ -33,20 +33,21 @@ public class ChatBotService {
     private final ChatClient chatClient;
     private final EvoTicketTools evoTicketTools;
     private final JwtUtil jwtUtil;
-    private final ChatMessageService chatMessageService;
     private final VectorStore vectorStore;
+    private final ChatMemory chatMemory;
 
     public ChatBotService(
             ChatClient chatClient,
             EvoTicketTools evoTicketTools,
             JwtUtil jwtUtil,
-            ChatMessageService chatMessageService,
-            VectorStore vectorStore) {
+            VectorStore vectorStore,
+            ChatMemory chatMemory
+    ) {
         this.chatClient = chatClient;
         this.evoTicketTools = evoTicketTools;
         this.jwtUtil = jwtUtil;
-        this.chatMessageService = chatMessageService;
         this.vectorStore = vectorStore;
+        this.chatMemory = chatMemory;
     }
 
     public record FileData(MimeType mimeType, Resource resource) {}
@@ -66,11 +67,7 @@ public class ChatBotService {
             CompletableFuture.runAsync(() -> ingestResources(resourceList));
         }
 
-        String answer = callToolCallingClient(userId, question, mediaList);
-
-        saveMessages(userId, question, files, answer);
-        
-        return answer;
+        return callToolCallingClient(userId, question, mediaList);
     }
 
     private String callToolCallingClient(Long userId, String question, List<Media> mediaList) {
@@ -167,8 +164,21 @@ public class ChatBotService {
         }
     }
 
-    private void saveMessages(Long userId, String question, List<MultipartFile> files, String answer) {
-        chatMessageService.saveUserMessage(userId, question, files);
-        chatMessageService.saveAssistantMessage(userId, answer);
+    public List<Message> getChatMessages() {
+        Long userId = jwtUtil.getDataFromAuth().userId();
+        if (userId == null) {
+            throw new AppException(ErrorCode.UNAUTHORIZED, "User not authenticated");
+        }
+
+        return chatMemory.get(userId.toString());
+    }
+
+    public void clearChatHistory() {
+        Long userId = jwtUtil.getDataFromAuth().userId();
+        if (userId == null) {
+            throw new AppException(ErrorCode.UNAUTHORIZED, "User not authenticated");
+        }
+
+        chatMemory.clear(userId.toString());
     }
 }

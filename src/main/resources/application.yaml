@@ -31,18 +31,15 @@ spring:
     chat:
       memory:
         repository:
-          mongo:
-            create-indices: false
+          jdbc:
+            initialize-schema: always
     vectorstore:
-      mongodb:
-        collection-name: vector-store
-        index-name: vector-index
-        initialize-schema: true
-        path-name: embedding
+      pgvector:
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 1536
+        max-document-batch-size: 10000
   data:
-    mongodb:
-      uri: ${MONGODB_URI}
-      database: ${MONGODB_DATABASE:inventory_chatbot}
     redis:
       url: ${REDIS_URL}
       timeout: 2000ms
