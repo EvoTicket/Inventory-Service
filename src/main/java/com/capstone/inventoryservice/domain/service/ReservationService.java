@@ -1,9 +1,11 @@
 package com.capstone.inventoryservice.domain.service;
 
 import com.capstone.inventoryservice.domain.dto.request.ReserveRequest;
+import com.capstone.inventoryservice.domain.dto.response.BookingSessionData;
 import com.capstone.inventoryservice.domain.dto.response.ReserveResponse;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
+import com.capstone.inventoryservice.security.JwtUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class ReservationService {
     private final TicketReserveService ticketReserveService;
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
+    private final JwtUtil jwtUtil;
 
     private static final long SESSION_TTL_MINUTES = 15;
 
@@ -47,9 +50,10 @@ public class ReservationService {
         String sessionId = UUID.randomUUID().toString();
         String sessionKey = "booking:session:" + sessionId;
         String dataKey = "booking:data:" + sessionId;
+        Long userId = jwtUtil.getDataFromAuth().userId();
 
         try {
-            String dataJson = objectMapper.writeValueAsString(request);
+            String dataJson = objectMapper.writeValueAsString(BookingSessionData.fromReserveRequest(request, userId));
             // Save data with a slightly longer TTL (e.g. 20 mins) so it's guaranteed to be there when session expires
             stringRedisTemplate.opsForValue().set(dataKey, dataJson, SESSION_TTL_MINUTES + 5, TimeUnit.MINUTES);
             

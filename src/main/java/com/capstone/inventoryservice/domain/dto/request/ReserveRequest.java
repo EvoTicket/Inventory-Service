@@ -11,9 +11,6 @@ import java.util.List;
 
 @Data
 public class ReserveRequest {
-    @NotNull(message = "User ID không được để trống")
-    private String userId;
-
     @NotEmpty(message = "Danh sách items không được rỗng")
     @Valid
     private List<ReserveItem> items;
