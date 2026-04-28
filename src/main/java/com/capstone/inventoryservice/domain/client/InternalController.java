@@ -36,20 +36,6 @@ public class InternalController {
         return ResponseEntity.ok(BaseResponse.ok(ticketTypeService.getTicketTypes(listItems)));
     }
 
-    @PostMapping("/ticket-types/reserve")
-    public ResponseEntity<BaseResponse<Boolean>> reserveTickets(
-            @RequestBody List<OrderItemRequest> items
-    ) {
-        log.info("Reserving tickets: {}", items);
-        for (OrderItemRequest item : items) {
-            ticketReserveService.reserveOrThrow(
-                    item.getTicketTypeId(),
-                    item.getQuantity()
-            );
-        }
-        return ResponseEntity.ok(BaseResponse.ok(true));
-    }
-
     @PostMapping("/ticket-types/release")
     public ResponseEntity<BaseResponse<Boolean>> releaseTickets(
             @RequestBody List<OrderItemRequest> items) {

@@ -53,6 +53,13 @@ public class RedisConfig {
         return StreamMessageListenerContainer.create(factory, options);
     }
 
+    @Bean
+    public org.springframework.data.redis.listener.RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory connectionFactory) {
+        org.springframework.data.redis.listener.RedisMessageListenerContainer container = new org.springframework.data.redis.listener.RedisMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+        return container;
+    }
+
     @Value("${spring.data.redis.url:redis://localhost:6379}")
     private String redisUrl;
 
