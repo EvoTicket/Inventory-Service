@@ -2,6 +2,7 @@ package com.capstone.inventoryservice.domain.service;
 
 import com.capstone.inventoryservice.domain.dto.request.ReserveRequest;
 import com.capstone.inventoryservice.domain.dto.response.BookingSessionData;
+import com.capstone.inventoryservice.domain.dto.response.BookingSessionResponse;
 import com.capstone.inventoryservice.domain.dto.response.ReserveResponse;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
@@ -74,5 +75,33 @@ public class ReservationService {
                 .expiresAt(expiresAt)
                 .remainingSeconds(SESSION_TTL_MINUTES * 60)
                 .build();
+    }
+    public BookingSessionResponse getBookingSession(String sessionId) {
+        String dataKey = "booking:data:" + sessionId;
+        String sessionKey = "booking:session:" + sessionId;
+        
+        String dataJson = stringRedisTemplate.opsForValue().get(dataKey);
+        
+        if (dataJson == null) {
+            throw new AppException(ErrorCode.BOOKING_SESSION_NOT_FOUND, "Phiên đặt vé không tồn tại hoặc đã hết hạn");
+        }
+        
+        Long remainingSeconds = stringRedisTemplate.getExpire(sessionKey, TimeUnit.SECONDS);
+        if (remainingSeconds == null || remainingSeconds <= 0) {
+            throw new AppException(ErrorCode.BOOKING_SESSION_NOT_FOUND, "Phiên đặt vé không tồn tại hoặc đã hết hạn");
+        }
+        
+        try {
+            BookingSessionData sessionData = objectMapper.readValue(dataJson, BookingSessionData.class);
+            LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(remainingSeconds);
+            
+            return BookingSessionResponse.builder()
+                    .sessionData(sessionData)
+                    .expiresAt(expiresAt)
+                    .remainingSeconds(remainingSeconds)
+                    .build();
+        } catch (JsonProcessingException e) {
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to deserialize booking session data", e);
+        }
     }
 }
