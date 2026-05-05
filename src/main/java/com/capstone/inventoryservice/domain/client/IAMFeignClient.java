@@ -4,6 +4,7 @@ import com.capstone.inventoryservice.config.FeignClientConfig;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @FeignClient(
         name = "iam-service",
@@ -17,4 +18,7 @@ public interface IAMFeignClient {
 
     @GetMapping("/users/{id}")
     UserInternalResponse getUserById(@PathVariable Long id);
+
+    @GetMapping("/users/count-since")
+    long getNewUsersCount(@RequestParam("since") String since);
 }

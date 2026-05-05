@@ -24,4 +24,7 @@ public interface OrderFeignClient {
 
     @GetMapping("/orders/events/revenue")
     Map<Long, BigDecimal> getRevenueForEvents(@RequestParam("eventIds") List<Long> eventIds);
+
+    @GetMapping("/orders/platform-stats")
+    PlatformStatsInternalResponse getPlatformStats(@RequestParam("days") int days);
 }
