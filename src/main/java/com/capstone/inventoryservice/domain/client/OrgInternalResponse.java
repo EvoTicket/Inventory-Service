@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 public class OrgInternalResponse {
     private Long id;
     private String organizationName;
+    private String description;
     private String logoUrl;
     private AddressInfo addressInfo;
     private String businessPhone;
