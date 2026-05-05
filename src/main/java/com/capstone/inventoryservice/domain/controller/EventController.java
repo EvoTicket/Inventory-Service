@@ -8,7 +8,9 @@ import com.capstone.inventoryservice.domain.dto.request.UpdateEventRequest;
 import com.capstone.inventoryservice.domain.dto.response.EventResponse;
 import com.capstone.inventoryservice.domain.dto.response.HomepageResponse;
 import com.capstone.inventoryservice.domain.dto.response.ListEventResponse;
+import com.capstone.inventoryservice.domain.dto.response.OrgEventDto;
 import com.capstone.inventoryservice.domain.dto.response.TrendingEventResponse;
+import com.capstone.inventoryservice.model.enums.EventApprovalStatus;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
 import com.capstone.inventoryservice.model.enums.EventCategory;
@@ -219,6 +221,62 @@ public class EventController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/organizer/{orgId}")
+    @Operation(summary = "Get events for organization",
+            description = "Get paginated list of events with statistics and filters for an organization")
+    public ResponseEntity<BaseResponse<OrgEventDto>> getEventsForOrg(
+            @PathVariable Long orgId,
+            @Parameter(description = "Search keyword (event name, description, venue)")
+            @RequestParam(required = false) String keyword,
+
+            @Parameter(description = "Filter by multiple categories")
+            @RequestParam(required = false) List<EventCategory> categories,
+
+            @Parameter(description = "Filter by multiple event types")
+            @RequestParam(required = false) List<EventType> eventTypes,
+
+            @Parameter(description = "Filter by multiple event statuses")
+            @RequestParam(required = false) List<EventStatus> eventStatuses,
+
+            @Parameter(description = "Filter by multiple approval statuses")
+            @RequestParam(required = false) List<EventApprovalStatus> approvalStatuses,
+
+            @Parameter(description = "Filter by start date (YYYY-MM-DD)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+
+            @Parameter(description = "Filter by end date (YYYY-MM-DD)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+
+            @Parameter(description = "Page number (1-indexed)")
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+
+            @Parameter(description = "Page size (max: 100)")
+            @RequestParam(required = false, defaultValue = "20") Integer size,
+
+            @Parameter(description = "Sort by field (createdAt, startDatetime, totalSeats, eventName)")
+            @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
+
+            @Parameter(description = "Sort direction (ASC, DESC)")
+            @RequestParam(required = false, defaultValue = "DESC") String sortDirection
+    ) {
+        EventFilterRequest filter = EventFilterRequest.builder()
+                .keyword(keyword)
+                .categories(categories)
+                .eventTypes(eventTypes)
+                .eventStatuses(eventStatuses)
+                .approvalStatuses(approvalStatuses)
+                .startDate(startDate)
+                .endDate(endDate)
+                .page(page - 1)
+                .size(size)
+                .sortBy(sortBy)
+                .sortDirection(sortDirection)
+                .build();
+
+        OrgEventDto response = eventService.getOrgEvents(orgId, filter);
+        return ResponseEntity.ok(BaseResponse.ok("Lấy danh sách sự kiện thành công", response));
     }
 
     @GetMapping("/recommended")

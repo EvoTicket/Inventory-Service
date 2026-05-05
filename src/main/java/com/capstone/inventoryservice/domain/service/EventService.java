@@ -19,6 +19,7 @@ import com.capstone.inventoryservice.domain.dto.response.ShowtimeResponse;
 import com.capstone.inventoryservice.domain.dto.response.TicketTypeResponse;
 import com.capstone.inventoryservice.domain.dto.response.TrendingEventResponse;
 import com.capstone.inventoryservice.domain.dto.response.EventVolumeResponse;
+import com.capstone.inventoryservice.domain.dto.response.OrgEventDto;
 import com.capstone.inventoryservice.domain.mapper.ReviewMapper;
 import com.capstone.inventoryservice.model.entity.Event;
 import com.capstone.inventoryservice.model.entity.EventView;
@@ -31,6 +32,7 @@ import com.capstone.inventoryservice.model.enums.EventCategory;
 import com.capstone.inventoryservice.model.enums.EventType;
 import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
 import com.capstone.inventoryservice.model.enums.EventStatus;
+import com.capstone.inventoryservice.model.enums.EventApprovalStatus;
 import com.capstone.inventoryservice.model.repository.EventRepository;
 import com.capstone.inventoryservice.model.repository.EventViewRepository;
 import com.capstone.inventoryservice.model.repository.UserFavoriteEventRepository;
@@ -458,6 +460,47 @@ public class EventService {
             return buildEventPageResponse(eventPage, pageable);
         }
 
+    }
+
+    @Transactional(readOnly = true)
+    public OrgEventDto getOrgEvents(Long orgId, EventFilterRequest filter) {
+        filter.setOrganizerId(orgId);
+
+        Specification<Event> spec = EventSpecification.withFilters(filter);
+        Pageable pageable = buildPageable(filter);
+
+        Page<Event> eventPage = eventRepository.findAll(spec, pageable);
+
+        Page<OrgEventDto.EventResponseDto> dtoPage = eventPage.map(event -> {
+            return OrgEventDto.EventResponseDto.builder()
+                    .id(event.getId())
+                    .name(event.getEventName())
+                    .thumbnailUrl(event.getThumbnailImage())
+                    .category(event.getCategory())
+                    .type(event.getEventType())
+                    .startTime(event.getEarliestStart())
+                    .venue(event.getFullAddress())
+                    .status(event.getEventStatus())
+                    .approvalStatus(event.getApprovalStatus())
+                    .soldTickets(event.getTotalQuantitySold() != null ? event.getTotalQuantitySold().longValue() : 0L)
+                    .totalTickets(event.getTotalQuantityTotal() != null ? event.getTotalQuantityTotal().longValue() : 0L)
+                    .totalCheckers(event.getCheckers() != null ? event.getCheckers().intValue() : 0)
+                    .updatedAt(event.getUpdatedAt())
+                    .build();
+        });
+
+        long totalEvents = eventRepository.count(EventSpecification.withFilters(EventFilterRequest.builder().organizerId(orgId).build()));
+        long totalOnSales = eventRepository.count(EventSpecification.withFilters(EventFilterRequest.builder().organizerId(orgId).eventStatuses(List.of(EventStatus.ON_SALE)).build()));
+        long totalCompleted = eventRepository.count(EventSpecification.withFilters(EventFilterRequest.builder().organizerId(orgId).eventStatuses(List.of(EventStatus.COMPLETED)).build()));
+        long totalPending = eventRepository.count(EventSpecification.withFilters(EventFilterRequest.builder().organizerId(orgId).approvalStatuses(List.of(EventApprovalStatus.PENDING)).build()));
+
+        return OrgEventDto.builder()
+                .totalEvents(totalEvents)
+                .totalOnSales(totalOnSales)
+                .totalPending(totalPending)
+                .totalCompleted(totalCompleted)
+                .events(BasePageResponse.fromPage(dtoPage))
+                .build();
     }
 
     private EventResponse convertToDTO(Event event) {

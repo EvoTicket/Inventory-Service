@@ -1,9 +1,6 @@
 package com.capstone.inventoryservice.model.entity;
 
-import com.capstone.inventoryservice.model.enums.EventCategory;
-import com.capstone.inventoryservice.model.enums.EventStatus;
-import com.capstone.inventoryservice.model.enums.EventType;
-import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
+import com.capstone.inventoryservice.model.enums.*;
 import jakarta.persistence.*;
 import org.hibernate.annotations.Formula;
 import lombok.*;
@@ -80,6 +77,10 @@ public class Event {
     private Boolean isFeatured;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "approval_status")
+    private EventApprovalStatus approvalStatus = EventApprovalStatus.PENDING;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "category")
     private EventCategory category;
 
@@ -102,6 +103,9 @@ public class Event {
     private BigDecimal latitude;
 
     private BigDecimal longitude;
+
+    @Column(name = "checkers")
+    private Long checkers;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

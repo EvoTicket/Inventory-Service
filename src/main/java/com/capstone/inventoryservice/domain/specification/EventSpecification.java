@@ -1,6 +1,7 @@
 package com.capstone.inventoryservice.domain.specification;
 
 import com.capstone.inventoryservice.domain.dto.request.EventFilterRequest;
+import com.capstone.inventoryservice.model.enums.EventApprovalStatus;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
 import com.capstone.inventoryservice.model.entity.Event;
@@ -44,6 +45,14 @@ public class EventSpecification {
 
             if (filter.getEventTypes() != null && !filter.getEventTypes().isEmpty()) {
                 predicates.add(root.get("eventType").in(filter.getEventTypes()));
+            }
+
+            if (filter.getOrganizerId() != null) {
+                predicates.add(criteriaBuilder.equal(root.get("organizerId"), filter.getOrganizerId()));
+            }
+
+            if (filter.getApprovalStatuses() != null && !filter.getApprovalStatuses().isEmpty()) {
+                predicates.add(root.get("approvalStatus").in(filter.getApprovalStatuses()));
             }
 
             if (filter.getEventStatuses() != null && !filter.getEventStatuses().isEmpty()) {
