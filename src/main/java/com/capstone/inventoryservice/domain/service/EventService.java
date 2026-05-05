@@ -463,7 +463,11 @@ public class EventService {
     }
 
     @Transactional(readOnly = true)
-    public OrgEventDto getOrgEvents(Long orgId, EventFilterRequest filter) {
+    public OrgEventDto getOrgEvents(EventFilterRequest filter) {
+        if(!jwtUtil.getDataFromAuth().isOrganization()) {
+            throw new AppException(ErrorCode.FORBIDDEN, "Only organization users can access their events");
+        }
+        Long orgId = jwtUtil.getDataFromAuth().organizationId();
         filter.setOrganizerId(orgId);
 
         Specification<Event> spec = EventSpecification.withFilters(filter);
@@ -471,23 +475,20 @@ public class EventService {
 
         Page<Event> eventPage = eventRepository.findAll(spec, pageable);
 
-        Page<OrgEventDto.EventResponseDto> dtoPage = eventPage.map(event -> {
-            return OrgEventDto.EventResponseDto.builder()
-                    .id(event.getId())
-                    .name(event.getEventName())
-                    .thumbnailUrl(event.getThumbnailImage())
-                    .category(event.getCategory())
-                    .type(event.getEventType())
-                    .startTime(event.getEarliestStart())
-                    .venue(event.getFullAddress())
-                    .status(event.getEventStatus())
-                    .approvalStatus(event.getApprovalStatus())
-                    .soldTickets(event.getTotalQuantitySold() != null ? event.getTotalQuantitySold().longValue() : 0L)
-                    .totalTickets(event.getTotalQuantityTotal() != null ? event.getTotalQuantityTotal().longValue() : 0L)
-                    .totalCheckers(event.getCheckers() != null ? event.getCheckers().intValue() : 0)
-                    .updatedAt(event.getUpdatedAt())
-                    .build();
-        });
+        List<Long> eventIds = eventPage.getContent()
+                .stream()
+                .map(Event::getId)
+                .toList();
+
+        Map<Long, BigDecimal> revenueMap =
+                orderFeignClient.getRevenueForEvents(eventIds);
+
+        Page<OrgEventDto.EventResponseDto> dtoPage = eventPage.map(event ->
+                OrgEventDto.EventResponseDto.fromEntity(
+                        event,
+                        revenueMap.get(event.getId())
+                )
+        );
 
         long totalEvents = eventRepository.count(EventSpecification.withFilters(EventFilterRequest.builder().organizerId(orgId).build()));
         long totalOnSales = eventRepository.count(EventSpecification.withFilters(EventFilterRequest.builder().organizerId(orgId).eventStatuses(List.of(EventStatus.ON_SALE)).build()));

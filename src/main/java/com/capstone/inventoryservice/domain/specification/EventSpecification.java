@@ -1,7 +1,6 @@
 package com.capstone.inventoryservice.domain.specification;
 
 import com.capstone.inventoryservice.domain.dto.request.EventFilterRequest;
-import com.capstone.inventoryservice.model.enums.EventApprovalStatus;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
 import com.capstone.inventoryservice.model.entity.Event;
@@ -59,7 +58,7 @@ public class EventSpecification {
                 List<Predicate> statusPredicates = new ArrayList<>();
                 LocalDateTime now = LocalDateTime.now();
 
-                Join<Event, Showtime> showtimeJoin = root.join("showtime", JoinType.LEFT);
+                Join<Event, Showtime> showtimeJoin = root.join("showtimes", JoinType.LEFT);
                 Join<Showtime, TicketType> ticketTypeJoin = showtimeJoin.join("ticketTypes", JoinType.LEFT);
 
                 for (EventStatus status : filter.getEventStatuses()) {
