@@ -9,11 +9,13 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface TicketTypeRepository extends JpaRepository<TicketType, Long> {
+    boolean existsByIdIn(Collection<Long> ids);
 
     @Query("SELECT t FROM TicketType t WHERE t.showtime.event.id = :eventId")
     List<TicketType> findByEventId(Long eventId);

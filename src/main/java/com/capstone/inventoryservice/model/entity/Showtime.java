@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 @Entity
@@ -69,10 +70,8 @@ public class Showtime {
         updatedAt = LocalDateTime.now();
     }
 
+    @Transient
     public String getFullAddress() {
-        if (ward != null && province != null) {
-            return address + ", " + ward.getName() + ", " + province.getName();
-        }
-        return address;
+        return venue + ", " + address + ", " + Objects.requireNonNullElse(ward.getName(),"") + ", " + Objects.requireNonNullElse(province.getName(), "");
     }
 }

@@ -126,10 +126,7 @@ public class Event {
 
     @Transient
     public String getFullAddress() {
-        if (ward != null && province != null) {
-            return address + ", " + ward.getName() + ", " + province.getName();
-        }
-        return address;
+        return venue + ", " + address + ", " + Objects.requireNonNullElse(ward.getName(),"") + ", " + Objects.requireNonNullElse(province.getName(), "");
     }
 
     @Transient

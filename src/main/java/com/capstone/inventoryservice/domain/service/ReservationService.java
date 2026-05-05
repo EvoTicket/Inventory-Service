@@ -6,6 +6,8 @@ import com.capstone.inventoryservice.domain.dto.response.BookingSessionResponse;
 import com.capstone.inventoryservice.domain.dto.response.ReserveResponse;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
+import com.capstone.inventoryservice.model.entity.TicketType;
+import com.capstone.inventoryservice.model.repository.TicketTypeRepository;
 import com.capstone.inventoryservice.security.JwtUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class ReservationService {
 
+    private final TicketTypeRepository ticketTypeRepository;
     private final TicketReserveService ticketReserveService;
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
@@ -33,6 +36,10 @@ public class ReservationService {
     private static final long SESSION_TTL_MINUTES = 15;
 
     public ReserveResponse reserveTickets(ReserveRequest request) {
+        if(!ticketTypeRepository.existsByIdIn(request.getItems().stream().map(ReserveRequest.ReserveItem::getTicketTypeId).toList())) {
+            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "One or more ticket types not found");
+        }
+
         List<ReserveRequest.ReserveItem> reservedItems = new ArrayList<>();
 
         try {
@@ -53,8 +60,11 @@ public class ReservationService {
         String dataKey = "booking:data:" + sessionId;
         Long userId = jwtUtil.getDataFromAuth().userId();
 
+        TicketType ticketType = ticketTypeRepository.findById(request.getItems().getFirst().getTicketTypeId())
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Ticket type not found"));
+
         try {
-            String dataJson = objectMapper.writeValueAsString(BookingSessionData.fromReserveRequest(request, userId));
+            String dataJson = objectMapper.writeValueAsString(BookingSessionData.fromReserveRequest(request, userId, ticketType));
             // Save data with a slightly longer TTL (e.g. 20 mins) so it's guaranteed to be there when session expires
             stringRedisTemplate.opsForValue().set(dataKey, dataJson, SESSION_TTL_MINUTES + 5, TimeUnit.MINUTES);
             
@@ -83,7 +93,7 @@ public class ReservationService {
         String dataJson = stringRedisTemplate.opsForValue().get(dataKey);
         
         if (dataJson == null) {
-            throw new AppException(ErrorCode.BOOKING_SESSION_NOT_FOUND, "Phiên đặt vé không tồn tại hoặc đã hết hạn");
+            throw  new AppException(ErrorCode.BOOKING_SESSION_NOT_FOUND, "Phiên đặt vé không tồn tại hoặc đã hết hạn");
         }
         
         Long remainingSeconds = stringRedisTemplate.getExpire(sessionKey, TimeUnit.SECONDS);
