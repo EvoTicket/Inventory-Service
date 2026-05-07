@@ -223,11 +223,10 @@ public class EventController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/organizer/{orgId}")
+    @GetMapping("/organizer/dashboard")
     @Operation(summary = "Get events for organization",
             description = "Get paginated list of events with statistics and filters for an organization")
     public ResponseEntity<BaseResponse<OrgEventDto>> getEventsForOrg(
-            @PathVariable Long orgId,
             @Parameter(description = "Search keyword (event name, description, venue)")
             @RequestParam(required = false) String keyword,
 
@@ -275,7 +274,7 @@ public class EventController {
                 .sortDirection(sortDirection)
                 .build();
 
-        OrgEventDto response = eventService.getOrgEvents(orgId, filter);
+        OrgEventDto response = eventService.getOrgEvents(filter);
         return ResponseEntity.ok(BaseResponse.ok("Lấy danh sách sự kiện thành công", response));
     }
 
