@@ -18,6 +18,8 @@ public class EventDetailInternalResponse {
     String venue;
     String address;
     String organizerName;
+    String category;
+    Long provinceId;
     ShowtimeDetail showtime;
 
     @Getter
@@ -53,6 +55,8 @@ public class EventDetailInternalResponse {
                 .venue(event.getVenue())
                 .address(event.getFullAddress() == null ? "" : event.getAddress())
                 .organizerName(organizerName)
+                .category(event.getCategory() != null ? event.getCategory().name() : null)
+                .provinceId(event.getProvince() != null ? event.getProvince().getCode() : null)
                 .showtime(ShowtimeDetail.from(showtime))
                 .build();
     }
