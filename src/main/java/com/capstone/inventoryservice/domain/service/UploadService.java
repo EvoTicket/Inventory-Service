@@ -52,4 +52,25 @@ public class UploadService {
         }
         return CompletableFuture.completedFuture(null);
     }
+
+    @Async
+    public CompletableFuture<Void> uploadTicketTypeImageAsync(com.capstone.inventoryservice.model.entity.TicketType ticketType, byte[] imageBytes) {
+        String folder = "event/" + ticketType.getShowtime().getEvent().getId() + "/ticket_types/";
+        String publicId = UUID.randomUUID().toString();
+
+        Map<String, Object> options = new HashMap<>();
+        options.put("resource_type", "image");
+        options.put("folder", folder);
+        options.put("public_id", publicId);
+        options.put("overwrite", true);
+
+        try {
+            var uploadResult = cloudinary.uploader().upload(imageBytes, options);
+            String url = uploadResult.get("url").toString();
+            ticketType.setThumbnailImage(url);
+        } catch (IOException e) {
+            throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể tải ảnh vé lên Cloudinary: " + e.getMessage());
+        }
+        return CompletableFuture.completedFuture(null);
+    }
 }

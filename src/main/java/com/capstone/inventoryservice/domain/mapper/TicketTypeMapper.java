@@ -20,6 +20,7 @@ public class TicketTypeMapper {
                 .saleStartDate(ticketType.getSaleStartDate())
                 .saleEndDate(ticketType.getSaleEndDate())
                 .ticketTypeStatus(ticketType.getTicketTypeStatus())
+                .thumbnailImage(ticketType.getThumbnailImage())
                 .showtimeId(ticketType.getShowtime().getId())
                 .eventId(ticketType.getShowtime().getEvent().getId())
                 .eventName(ticketType.getShowtime().getEvent().getEventName())

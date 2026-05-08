@@ -21,6 +21,7 @@ public class TicketTypeResponse {
     private LocalDateTime saleStartDate;
     private LocalDateTime saleEndDate;
     private TicketTypeStatus ticketTypeStatus;
+    private String thumbnailImage;
     private Long showtimeId;
     private Long eventId;
     private String eventName;

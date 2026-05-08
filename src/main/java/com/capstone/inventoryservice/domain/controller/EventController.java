@@ -39,7 +39,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/events")
 @RequiredArgsConstructor
-public class EventController {
+public class  EventController {
 
     private final EventService eventService;
 
@@ -167,10 +167,15 @@ public class EventController {
             @RequestPart(value = "seatMapImage", required = false)
             @Parameter(description = "Seat map image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
                     schema = @Schema(type = "string", format = "binary")))
-            MultipartFile seatMapImage
+            MultipartFile seatMapImage,
+
+            @RequestPart(value = "ticketTypeImages", required = false)
+            @Parameter(description = "Ticket type images", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    schema = @Schema(type = "array", items = @Schema(type = "string", format = "binary"))))
+            List<MultipartFile> ticketTypeImages
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(BaseResponse.ok("tạo event thành công" ,eventService.createEvent(request, bannerImage, thumbnailImage, seatMapImage)));
+                .body(BaseResponse.ok("tạo event thành công" ,eventService.createEvent(request, bannerImage, thumbnailImage, seatMapImage, ticketTypeImages)));
     }
 
     @PutMapping("/{eventId}")
