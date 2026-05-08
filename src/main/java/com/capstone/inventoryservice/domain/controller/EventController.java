@@ -19,6 +19,7 @@ import com.capstone.inventoryservice.model.enums.EventSortOption;
 import com.capstone.inventoryservice.domain.service.EventService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
@@ -170,8 +171,15 @@ public class  EventController {
             MultipartFile seatMapImage,
 
             @RequestPart(value = "ticketTypeImages", required = false)
-            @Parameter(description = "Ticket type images", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
-                    schema = @Schema(type = "array", items = @Schema(type = "string", format = "binary"))))
+            @Parameter(
+                    description = "Ticket type images",
+                    content = @Content(
+                            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                            array = @ArraySchema(
+                                    schema = @Schema(type = "string", format = "binary")
+                            )
+                    )
+            )
             List<MultipartFile> ticketTypeImages
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
