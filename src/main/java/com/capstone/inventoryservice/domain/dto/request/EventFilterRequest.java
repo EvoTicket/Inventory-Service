@@ -4,6 +4,7 @@ import com.capstone.inventoryservice.model.enums.EventApprovalStatus;
 import com.capstone.inventoryservice.model.enums.EventCategory;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
+import com.capstone.inventoryservice.model.enums.EventSortOption;
 import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -49,6 +50,5 @@ public class EventFilterRequest {
     private Integer page = 0;
     private Integer size = 20;
 
-    private String sortBy = "createdAt";
-    private String sortDirection = "DESC";
+    private EventSortOption sort = EventSortOption.NEWEST;
 }

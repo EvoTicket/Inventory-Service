@@ -33,6 +33,7 @@ import com.capstone.inventoryservice.model.enums.EventType;
 import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventApprovalStatus;
+import com.capstone.inventoryservice.model.enums.EventSortOption;
 import com.capstone.inventoryservice.model.repository.EventRepository;
 import com.capstone.inventoryservice.model.repository.EventViewRepository;
 import com.capstone.inventoryservice.model.repository.UserFavoriteEventRepository;
@@ -216,32 +217,10 @@ public class EventService {
         int size = filter.getSize() != null && filter.getSize() > 0 && filter.getSize() <= 100
                 ? filter.getSize() : 20;
 
-        String sortBy = filter.getSortBy() != null ? filter.getSortBy() : "createdAt";
-        String sortDirection = filter.getSortDirection() != null ? filter.getSortDirection() : "DESC";
-
-        String sortField = mapSortField(sortBy);
-
-        Sort.Direction direction = "ASC".equalsIgnoreCase(sortDirection)
-                ? Sort.Direction.ASC
-                : Sort.Direction.DESC;
-
-        Sort sort = Sort.by(direction, sortField);
+        EventSortOption sortOption = filter.getSort() != null ? filter.getSort() : EventSortOption.NEWEST;
+        Sort sort = sortOption.getSort();
 
         return PageRequest.of(page, size, sort);
-    }
-
-    private String mapSortField(String sortBy) {
-        return switch (sortBy.toLowerCase()) {
-            case "startdatetime", "starttime", "start", "neardate" -> "createdAt";
-            case "enddatetime", "endtime", "end" -> "createdAt";
-            case "totalseats", "seats" -> "totalSeats";
-            case "eventname", "name" -> "eventName";
-            case "popular", "trending" -> "viewCount";
-            case "price", "price_asc" -> "minPrice";
-            case "createdat", "created", "newest" -> "createdAt";
-            case "updatedat", "updated" -> "updatedAt";
-            default -> "createdAt";
-        };
     }
 
     @Transactional

@@ -15,6 +15,7 @@ import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
 import com.capstone.inventoryservice.model.enums.EventCategory;
 import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
+import com.capstone.inventoryservice.model.enums.EventSortOption;
 import com.capstone.inventoryservice.domain.service.EventService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -91,11 +92,8 @@ public class EventController {
             @Parameter(description = "Page size (max: 100)")
             @RequestParam(required = false, defaultValue = "20") Integer size,
 
-            @Parameter(description = "Sort by field (createdAt, startDatetime, totalSeats, eventName)")
-            @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
-
-            @Parameter(description = "Sort direction (ASC, DESC)")
-            @RequestParam(required = false, defaultValue = "DESC") String sortDirection
+            @Parameter(description = "Sort option (PRICE_ASC, PRICE_DESC, DATE_ASC, NEWEST, POPULAR)")
+            @RequestParam(required = false, defaultValue = "NEWEST") EventSortOption sort
     ) {
         EventFilterRequest filter = EventFilterRequest.builder()
                 .keyword(keyword)
@@ -113,8 +111,7 @@ public class EventController {
                 .includeExpired(includeExpired)
                 .page(page - 1)
                 .size(size)
-                .sortBy(sortBy)
-                .sortDirection(sortDirection)
+                .sort(sort)
                 .build();
 
         BasePageResponse<ListEventResponse> response = eventService.getEvents(filter);
@@ -254,11 +251,8 @@ public class EventController {
             @Parameter(description = "Page size (max: 100)")
             @RequestParam(required = false, defaultValue = "20") Integer size,
 
-            @Parameter(description = "Sort by field (createdAt, startDatetime, totalSeats, eventName)")
-            @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
-
-            @Parameter(description = "Sort direction (ASC, DESC)")
-            @RequestParam(required = false, defaultValue = "DESC") String sortDirection
+            @Parameter(description = "Sort option (PRICE_ASC, PRICE_DESC, DATE_ASC, NEWEST, POPULAR)")
+            @RequestParam(required = false, defaultValue = "NEWEST") EventSortOption sort
     ) {
         EventFilterRequest filter = EventFilterRequest.builder()
                 .keyword(keyword)
@@ -270,8 +264,7 @@ public class EventController {
                 .endDate(endDate)
                 .page(page - 1)
                 .size(size)
-                .sortBy(sortBy)
-                .sortDirection(sortDirection)
+                .sort(sort)
                 .build();
 
         OrgEventDto response = eventService.getOrgEvents(filter);
