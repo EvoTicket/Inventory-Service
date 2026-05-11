@@ -276,9 +276,11 @@ public class  EventController {
             description = "Get personalized event recommendations based on user's views, favorites, and purchase history")
     public ResponseEntity<BaseResponse<java.util.List<ListEventResponse>>> getRecommendedEvents(
             @Parameter(description = "Number of recommendations to return (default: 4)")
-            @RequestParam(required = false, defaultValue = "4") Integer limit
+            @RequestParam(required = false, defaultValue = "4") Integer limit,
+            @Parameter(description = "Event ID to exclude from recommendations")
+            @RequestParam(required = false) Long eventId
     ) {
-        java.util.List<ListEventResponse> recommendations = eventService.getRecommendedEvents(limit);
+        java.util.List<ListEventResponse> recommendations = eventService.getRecommendedEvents(limit, eventId);
         return ResponseEntity.ok(BaseResponse.ok("Lấy gợi ý thành công", recommendations));
     }
 }
