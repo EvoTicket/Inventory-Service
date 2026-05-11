@@ -61,7 +61,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class EventService {
-    private static final String DEFAULT_TICKET_IMAGE = "https://th.bing.com/th/id/OIP.LTD5EzMN1YJQWzTlVz4vmQHaHa?r=0&o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3";
 
     private final EventRepository eventRepository;
     private final EventViewRepository eventViewRepository;
@@ -251,7 +250,7 @@ public class EventService {
         eventViewRepository.save(view);
     }
 
-    public EventResponse createEvent(CreateEventRequest request, MultipartFile bannerFile, MultipartFile thumbnailFile, MultipartFile seatMapFile, List<MultipartFile> ticketTypeFiles) {
+    public EventResponse createEvent(CreateEventRequest request, MultipartFile bannerFile, MultipartFile thumbnailFile, MultipartFile seatMapFile) {
 
         Long orgId = jwtUtil.getDataFromAuth().organizationId();
         if(orgId == null) {
@@ -345,26 +344,7 @@ public class EventService {
             }
         }
 
-        if (ticketTypeFiles != null && !ticketTypeFiles.isEmpty()) {
-            for (int i = 0; i < Math.min(ticketTypeFiles.size(), allTicketTypes.size()); i++) {
-                MultipartFile file = ticketTypeFiles.get(i);
-                if (file != null && !file.isEmpty()) {
-                    try {
-                        uploadTasks.add(uploadService.uploadTicketTypeImageAsync(allTicketTypes.get(i), file.getBytes()));
-                    } catch (IOException e) {
-                        log.error("Failed to upload ticket type image for index: {}", i, e);
-                    }
-                }
-            }
-        }
-
         CompletableFuture.allOf(uploadTasks.toArray(new CompletableFuture[0])).join();
-
-        for (TicketType t : allTicketTypes) {
-            if (t.getThumbnailImage() == null) {
-                t.setThumbnailImage(DEFAULT_TICKET_IMAGE);
-            }
-        }
 
         eventRepository.save(savedEvent);
 

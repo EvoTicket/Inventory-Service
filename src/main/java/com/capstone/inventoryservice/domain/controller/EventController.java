@@ -19,7 +19,6 @@ import com.capstone.inventoryservice.model.enums.EventSortOption;
 import com.capstone.inventoryservice.domain.service.EventService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
@@ -168,22 +167,10 @@ public class  EventController {
             @RequestPart(value = "seatMapImage", required = false)
             @Parameter(description = "Seat map image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
                     schema = @Schema(type = "string", format = "binary")))
-            MultipartFile seatMapImage,
-
-            @RequestPart(value = "ticketTypeImages", required = false)
-            @Parameter(
-                    description = "Ticket type images",
-                    content = @Content(
-                            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
-                            array = @ArraySchema(
-                                    schema = @Schema(type = "string", format = "binary")
-                            )
-                    )
-            )
-            List<MultipartFile> ticketTypeImages
+            MultipartFile seatMapImage
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(BaseResponse.ok("tạo event thành công" ,eventService.createEvent(request, bannerImage, thumbnailImage, seatMapImage, ticketTypeImages)));
+                .body(BaseResponse.ok("tạo event thành công" ,eventService.createEvent(request, bannerImage, thumbnailImage, seatMapImage)));
     }
 
     @PutMapping("/{eventId}")

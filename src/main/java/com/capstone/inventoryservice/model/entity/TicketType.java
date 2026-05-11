@@ -50,9 +50,6 @@ public class TicketType {
     @Column(name = "ticket_type_status")
     private TicketTypeStatus ticketTypeStatus;
 
-    @Column(name = "thumbnail_image")
-    private String thumbnailImage;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "showtime_id", nullable = false)
     private Showtime showtime;
