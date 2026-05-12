@@ -610,7 +610,7 @@ public class EventService {
         }
 
         if (knownEventIds.isEmpty()) {
-            return getFallbackRecommendations(limit, excludedEventId);
+            return getFallbackRecommendations(limit, null);
         }
 
         Map<EventCategory, Integer> categoryScores = new EnumMap<>(EventCategory.class);
@@ -640,7 +640,7 @@ public class EventService {
         }
 
         if (categoryScores.isEmpty() && provinceScores.isEmpty() && organizerScores.isEmpty()) {
-            return getFallbackRecommendations(limit);
+            return getFallbackRecommendations(limit, excludedEventId);
         }
 
         LocalDateTime now = LocalDateTime.now();
