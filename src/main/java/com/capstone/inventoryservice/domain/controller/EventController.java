@@ -135,58 +135,6 @@ public class  EventController {
         return ResponseEntity.ok(BaseResponse.ok("Lấy thông tin trang chủ thành công", response));
     }
 
-    @GetMapping("/{eventId}")
-    public ResponseEntity<BaseResponse<EventResponse>> getEventById(@PathVariable Long eventId) {
-        return ResponseEntity
-                .ok(BaseResponse.ok("Lấy thông tin thành công" , eventService.getEventById(eventId)));
-    }
-
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<BaseResponse<EventResponse>> createEvent(
-            @Valid
-            @RequestPart("event")
-            @Parameter(
-                    description = "Event JSON",
-                    content = @Content(
-                            mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = CreateEventRequest.class)
-                    )
-            )
-            CreateEventRequest request,
-
-            @RequestPart(value = "bannerImage", required = false)
-            @Parameter(description = "Banner image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
-                    schema = @Schema(type = "string", format = "binary")))
-            MultipartFile bannerImage,
-
-            @RequestPart(value = "thumbnailImage", required = false)
-            @Parameter(description = "Thumbnail image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
-                    schema = @Schema(type = "string", format = "binary")))
-            MultipartFile thumbnailImage,
-
-            @RequestPart(value = "seatMapImage", required = false)
-            @Parameter(description = "Seat map image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
-                    schema = @Schema(type = "string", format = "binary")))
-            MultipartFile seatMapImage
-    ) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(BaseResponse.ok("tạo event thành công" ,eventService.createEvent(request, bannerImage, thumbnailImage, seatMapImage)));
-    }
-
-    @PutMapping("/{eventId}")
-    public ResponseEntity<BaseResponse<EventResponse>> updateEvent(
-            @PathVariable Long eventId,
-            @Valid @RequestBody UpdateEventRequest request) {
-        return ResponseEntity
-                .ok(BaseResponse.ok("Cập nhật event thành công", eventService.updateEvent(eventId, request)));
-    }
-
-    @DeleteMapping("/{eventId}")
-    public ResponseEntity<BaseResponse<Boolean>> deleteEvent(@PathVariable Long eventId) {
-        return ResponseEntity
-                .ok(BaseResponse.ok("success", eventService.deleteEvent(eventId)));
-    }
-
     @GetMapping("/my")
     @Operation(summary = "Get events by organizer",
             description = "Get paginated list of events filtered by organizer ID and optional status")
@@ -271,7 +219,7 @@ public class  EventController {
         return ResponseEntity.ok(BaseResponse.ok("Lấy danh sách sự kiện thành công", response));
     }
 
-    @GetMapping("/recommended")
+    @GetMapping({"/recommend", "/recommended"})
     @Operation(summary = "Get recommended events for current user",
             description = "Get personalized event recommendations based on user's views, favorites, and purchase history")
     public ResponseEntity<BaseResponse<java.util.List<ListEventResponse>>> getRecommendedEvents(
@@ -283,4 +231,58 @@ public class  EventController {
         java.util.List<ListEventResponse> recommendations = eventService.getRecommendedEvents(limit, eventId);
         return ResponseEntity.ok(BaseResponse.ok("Lấy gợi ý thành công", recommendations));
     }
+
+    @GetMapping("/{eventId}")
+    public ResponseEntity<BaseResponse<EventResponse>> getEventById(@PathVariable Long eventId) {
+        return ResponseEntity
+                .ok(BaseResponse.ok("Lấy thông tin thành công" , eventService.getEventById(eventId)));
+    }
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<BaseResponse<EventResponse>> createEvent(
+            @Valid
+            @RequestPart("event")
+            @Parameter(
+                    description = "Event JSON",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = CreateEventRequest.class)
+                    )
+            )
+            CreateEventRequest request,
+
+            @RequestPart(value = "bannerImage", required = false)
+            @Parameter(description = "Banner image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    schema = @Schema(type = "string", format = "binary")))
+            MultipartFile bannerImage,
+
+            @RequestPart(value = "thumbnailImage", required = false)
+            @Parameter(description = "Thumbnail image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    schema = @Schema(type = "string", format = "binary")))
+            MultipartFile thumbnailImage,
+
+            @RequestPart(value = "seatMapImage", required = false)
+            @Parameter(description = "Seat map image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    schema = @Schema(type = "string", format = "binary")))
+            MultipartFile seatMapImage
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(BaseResponse.ok("tạo event thành công" ,eventService.createEvent(request, bannerImage, thumbnailImage, seatMapImage)));
+    }
+
+    @PutMapping("/{eventId}")
+    public ResponseEntity<BaseResponse<EventResponse>> updateEvent(
+            @PathVariable Long eventId,
+            @Valid @RequestBody UpdateEventRequest request) {
+        return ResponseEntity
+                .ok(BaseResponse.ok("Cập nhật event thành công", eventService.updateEvent(eventId, request)));
+    }
+
+    @DeleteMapping("/{eventId}")
+    public ResponseEntity<BaseResponse<Boolean>> deleteEvent(@PathVariable Long eventId) {
+        return ResponseEntity
+                .ok(BaseResponse.ok("success", eventService.deleteEvent(eventId)));
+    }
+
+
 }
