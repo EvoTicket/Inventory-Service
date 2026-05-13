@@ -36,6 +36,4 @@ public class CreateTicketTypeRequest {
 
     @NotNull(message = "Ticket type status is required")
     private TicketTypeStatus ticketTypeStatus;
-
-    private Long showtimeId;
 }

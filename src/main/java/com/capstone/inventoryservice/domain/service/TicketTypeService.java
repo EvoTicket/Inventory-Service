@@ -107,48 +107,6 @@ public class TicketTypeService {
     }
 
     @Transactional
-    public TicketTypeResponse createTicketType(CreateTicketTypeRequest request) {
-        if (request.getShowtimeId() == null) {
-            throw new AppException(ErrorCode.BAD_REQUEST, "Showtime ID is required");
-        }
-        Showtime showtime = showtimeUtil.getShowtimeOrElseThrow(request.getShowtimeId());
-
-        if (
-                request.getSaleStartDate() != null &&
-                request.getSaleEndDate() != null &&
-                request.getSaleEndDate().isBefore(request.getSaleStartDate())
-        ) {
-            throw new AppException(ErrorCode.BAD_REQUEST, "Sale end date must be after sale start date");
-        }
-
-        if (
-                request.getMinPurchase() != null &&
-                request.getMaxPurchase() != null &&
-                request.getMaxPurchase() < request.getMinPurchase()
-        ) {
-            throw new AppException(ErrorCode.BAD_REQUEST, "Max purchase must be greater than or equal to min purchase");
-        }
-
-        TicketType ticketType = TicketType.builder()
-                .typeName(request.getTypeName())
-                .description(request.getDescription())
-                .price(request.getPrice())
-                .quantityTotal(request.getQuantityTotal())
-                .quantitySold(0)
-                .minPurchase(request.getMinPurchase())
-                .maxPurchase(request.getMaxPurchase())
-                .saleStartDate(request.getSaleStartDate())
-                .saleEndDate(request.getSaleEndDate())
-                .ticketTypeStatus(request.getTicketTypeStatus())
-                .showtime(showtime)
-                .build();
-
-        TicketType savedTicketType = ticketTypeRepository.save(ticketType);
-        showtime.getTicketTypes().add(savedTicketType);
-        return ticketTypeMapper.convertToDTO(savedTicketType);
-    }
-
-    @Transactional
     public TicketTypeResponse updateTicketType(Long ticketTypeId, UpdateTicketTypeRequest request) {
         TicketType ticketType = ticketTypeUtil.getTicketTypeOrElseThrow(ticketTypeId);
 

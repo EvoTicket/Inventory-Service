@@ -35,12 +35,6 @@ public class TicketTypeController {
         return ResponseEntity.ok(BaseResponse.ok(ticketTypeService.getActiveTicketTypes()));
     }
 
-    @PostMapping
-    public ResponseEntity<BaseResponse<TicketTypeResponse>> createTicketType(@Valid @RequestBody CreateTicketTypeRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(BaseResponse.ok(ticketTypeService.createTicketType(request)));
-    }
-
     @PutMapping("/{ticketTypeId}")
     public ResponseEntity<BaseResponse<TicketTypeResponse>> updateTicketType(
             @PathVariable Long ticketTypeId,
