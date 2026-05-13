@@ -578,7 +578,7 @@ public class EventService {
     }
 
     @Transactional(readOnly = true)
-    public List<ListEventResponse> getRecommendedEvents(int limit) {
+    public List<ListEventResponse> getRecommendedEvents(int limit, Long excludedEventId) {
         Long userId = null;
         try {
             var auth = jwtUtil.getDataFromAuth();
@@ -588,7 +588,7 @@ public class EventService {
         }
 
         if (userId == null) {
-            return getFallbackRecommendations(limit);
+            return getFallbackRecommendations(limit, excludedEventId);
         }
 
         List<Long> viewedEventIds = eventViewRepository.findViewedEventIdsByUserId(userId);
@@ -605,9 +605,12 @@ public class EventService {
         knownEventIds.addAll(viewedEventIds);
         knownEventIds.addAll(favoritedEventIds);
         knownEventIds.addAll(purchasedEventIds);
+        if (excludedEventId != null) {
+            knownEventIds.add(excludedEventId);
+        }
 
         if (knownEventIds.isEmpty()) {
-            return getFallbackRecommendations(limit);
+            return getFallbackRecommendations(limit, null);
         }
 
         Map<EventCategory, Integer> categoryScores = new EnumMap<>(EventCategory.class);
@@ -637,7 +640,7 @@ public class EventService {
         }
 
         if (categoryScores.isEmpty() && provinceScores.isEmpty() && organizerScores.isEmpty()) {
-            return getFallbackRecommendations(limit);
+            return getFallbackRecommendations(limit, excludedEventId);
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -683,22 +686,28 @@ public class EventService {
                 .toList();
 
         if (scoredCandidates.isEmpty()) {
-            return getFallbackRecommendations(limit);
+            return getFallbackRecommendations(limit, excludedEventId);
         }
 
         List<ListEventResponse> recommendations = mapToResponseList(scoredCandidates);
         if(scoredCandidates.size() < limit){
-            recommendations.addAll(getFallbackRecommendations(limit - scoredCandidates.size()));
+            recommendations.addAll(getFallbackRecommendations(limit - scoredCandidates.size(), excludedEventId));
         }
 
         return recommendations;
     }
 
-    private List<ListEventResponse> getFallbackRecommendations(int limit) {
-        Pageable pageable = PageRequest.of(0, limit);
+    private List<ListEventResponse> getFallbackRecommendations(int limit, Long excludedEventId) {
+        Pageable pageable = PageRequest.of(0, limit + (excludedEventId != null ? 1 : 0));
         LocalDateTime now = LocalDateTime.now();
         Page<Event> upcomingEvents = eventRepository.findUpcomingEvents(now, now.plusMonths(3), pageable);
-        return mapToResponseList(upcomingEvents.getContent());
+        
+        List<Event> result = upcomingEvents.getContent().stream()
+                .filter(e -> excludedEventId == null || !e.getId().equals(excludedEventId))
+                .limit(limit)
+                .toList();
+                
+        return mapToResponseList(result);
     }
 
     private record ScoredEvent(Event event, int score) { }
