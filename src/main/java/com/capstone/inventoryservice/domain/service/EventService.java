@@ -28,12 +28,7 @@ import com.capstone.inventoryservice.model.entity.TicketType;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
 import com.capstone.inventoryservice.domain.mapper.TicketTypeMapper;
-import com.capstone.inventoryservice.model.enums.EventCategory;
-import com.capstone.inventoryservice.model.enums.EventType;
-import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
-import com.capstone.inventoryservice.model.enums.EventStatus;
-import com.capstone.inventoryservice.model.enums.EventApprovalStatus;
-import com.capstone.inventoryservice.model.enums.EventSortOption;
+import com.capstone.inventoryservice.model.enums.*;
 import com.capstone.inventoryservice.model.repository.EventRepository;
 import com.capstone.inventoryservice.model.repository.EventViewRepository;
 import com.capstone.inventoryservice.model.repository.UserFavoriteEventRepository;
@@ -307,7 +302,7 @@ public class EventService {
                                 .maxPurchase(ticketRequest.getMaxPurchase())
                                 .saleStartDate(ticketRequest.getSaleStartDate())
                                 .saleEndDate(ticketRequest.getSaleEndDate())
-                                .ticketTypeStatus(ticketRequest.getTicketTypeStatus())
+                                .ticketTypeStatus(TicketTypeStatus.AVAILABLE)
                                 .showtime(showtime)
                                 .build();
 

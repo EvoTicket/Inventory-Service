@@ -33,7 +33,4 @@ public class CreateTicketTypeRequest {
 
     private LocalDateTime saleStartDate;
     private LocalDateTime saleEndDate;
-
-    @NotNull(message = "Ticket type status is required")
-    private TicketTypeStatus ticketTypeStatus;
 }
