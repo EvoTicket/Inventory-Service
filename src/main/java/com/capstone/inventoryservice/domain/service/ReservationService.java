@@ -60,11 +60,13 @@ public class ReservationService {
         String dataKey = "booking:data:" + sessionId;
         Long userId = jwtUtil.getDataFromAuth().userId();
 
-        TicketType ticketType = ticketTypeRepository.findById(request.getItems().getFirst().getTicketTypeId())
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Ticket type not found"));
+        List<TicketType> ticketTypes = ticketTypeRepository.findAllById(request.getItems().stream().map(ReserveRequest.ReserveItem::getTicketTypeId).toList());
+        if (ticketTypes.isEmpty()) {
+            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "No ticket types found");
+        }
 
         try {
-            String dataJson = objectMapper.writeValueAsString(BookingSessionData.fromReserveRequest(request, userId, ticketType));
+            String dataJson = objectMapper.writeValueAsString(BookingSessionData.fromReserveRequest(request, userId, ticketTypes));
             // Save data with a slightly longer TTL (e.g. 20 mins) so it's guaranteed to be there when session expires
             stringRedisTemplate.opsForValue().set(dataKey, dataJson, SESSION_TTL_MINUTES + 5, TimeUnit.MINUTES);
             
