@@ -245,7 +245,7 @@ public class EventService {
         eventViewRepository.save(view);
     }
 
-    public EventResponse createEvent(CreateEventRequest request, MultipartFile bannerFile, MultipartFile thumbnailFile) {
+    public Boolean createEvent(CreateEventRequest request, MultipartFile bannerFile, MultipartFile thumbnailFile) {
 
         Long orgId = jwtUtil.getDataFromAuth().organizationId();
         if(orgId == null) {
@@ -348,7 +348,7 @@ public class EventService {
             }
         }
 
-        return convertToDTO(eventRepository.findByIdWithDetails(savedEvent.getId()).orElse(savedEvent));
+        return true;
     }
 
     @Transactional
@@ -479,6 +479,7 @@ public class EventService {
         if (event.getShowtimes() != null) {
             showtimeDTOs = event.getShowtimes().stream()
                     .map(this::convertShowtimeToDTO)
+                    .sorted(Comparator.comparing(ShowtimeResponse::getStartDatetime))
                     .toList();
         }
         List<ReviewResponse> reviewDTOs = null;

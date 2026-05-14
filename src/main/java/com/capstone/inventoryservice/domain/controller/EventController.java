@@ -239,7 +239,7 @@ public class  EventController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<BaseResponse<EventResponse>> createEvent(
+    public ResponseEntity<BaseResponse<Boolean>> createEvent(
             @Valid
             @RequestPart("event")
             @Parameter(
