@@ -259,15 +259,10 @@ public class  EventController {
             @RequestPart(value = "thumbnailImage", required = false)
             @Parameter(description = "Thumbnail image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
                     schema = @Schema(type = "string", format = "binary")))
-            MultipartFile thumbnailImage,
-
-            @RequestPart(value = "seatMapImage", required = false)
-            @Parameter(description = "Seat map image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
-                    schema = @Schema(type = "string", format = "binary")))
-            MultipartFile seatMapImage
+            MultipartFile thumbnailImage
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(BaseResponse.ok("tạo event thành công" ,eventService.createEvent(request, bannerImage, thumbnailImage, seatMapImage)));
+                .body(BaseResponse.ok("tạo event thành công" ,eventService.createEvent(request, bannerImage, thumbnailImage)));
     }
 
     @PutMapping("/{eventId}")

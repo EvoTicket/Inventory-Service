@@ -245,7 +245,7 @@ public class EventService {
         eventViewRepository.save(view);
     }
 
-    public EventResponse createEvent(CreateEventRequest request, MultipartFile bannerFile, MultipartFile thumbnailFile, MultipartFile seatMapFile) {
+    public EventResponse createEvent(CreateEventRequest request, MultipartFile bannerFile, MultipartFile thumbnailFile) {
 
         Long orgId = jwtUtil.getDataFromAuth().organizationId();
         if(orgId == null) {
@@ -266,6 +266,7 @@ public class EventService {
                 .ward(locationUtil.getWardByCode(request.getWardCode()))
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
+                .seatMapImage("http://res.cloudinary.com/dtjmj7ayn/image/upload/v1776688153/event/2/seat_map/eedd19b3-9edc-49b9-87f7-6531e86eee2b.jpg")
                 .build();
 
         List<TicketType> allTicketTypes = new ArrayList<>();
@@ -329,13 +330,6 @@ public class EventService {
                 uploadTasks.add(uploadService.uploadImageAsync(savedEvent, thumbnailFile.getBytes(), "thumbnail"));
             } catch (IOException e) {
                 throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh thumbnail: " + e.getMessage());
-            }
-        }
-        if (seatMapFile != null && !seatMapFile.isEmpty()) {
-            try {
-                uploadTasks.add(uploadService.uploadImageAsync(savedEvent, seatMapFile.getBytes(), "seat_map"));
-            } catch (IOException e) {
-                throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh sơ đồ chỗ: " + e.getMessage());
             }
         }
 
