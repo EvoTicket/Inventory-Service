@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
@@ -23,15 +24,15 @@ public class ChatBotController {
 
     @PostMapping(value = "/ask", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> smartChat(
-            @RequestParam String question,
+            @RequestPart
+            @Parameter(description = "Câu hỏi của người dùng")
+            String question,
 
-            @Parameter(
-                    content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)
-            )
-            @RequestParam(value = "files", required = false) List<MultipartFile> files,
-            @RequestParam(value = "useRag", required = false, defaultValue = "false") boolean useRag
+            @RequestPart(required = false)
+            @Parameter(description = "Tệp đính kèm", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE))
+            List<FilePart> files
     ) {
-        return chatBotService.chat(question, files, useRag);
+        return chatBotService.chat(question, files, false);
     }
 
     @GetMapping("/history")

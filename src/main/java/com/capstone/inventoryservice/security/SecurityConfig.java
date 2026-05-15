@@ -54,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/api-docs/**").permitAll()
                         .requestMatchers("/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/error").permitAll()
 
                         .requestMatchers("/api/internal/**").hasRole("INTERNAL_SERVICE")
 

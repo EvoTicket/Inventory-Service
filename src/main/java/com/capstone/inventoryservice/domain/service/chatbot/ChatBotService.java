@@ -14,13 +14,19 @@ import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TextSplitter;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,22 +59,29 @@ public class ChatBotService {
 
     public record FileData(MimeType mimeType, Resource resource) {}
 
-    public Flux<String> chat(String question, List<MultipartFile> files, boolean useRag) {
+    public Flux<String> chat(String question, List<FilePart> files, boolean useRag) {
+
         Long userId = jwtUtil.getDataFromAuth().userId();
 
-        List<FileData> filesData = convertResources(files);
-        List<Media> mediaList = filesData.stream()
-                .map(fd -> new Media(fd.mimeType(), fd.resource()))
-                .toList();
-        List<Resource> resourceList = filesData.stream()
-                .map(FileData::resource)
-                .toList();
+        return convertResources(files)
+                .flatMapMany(filesData -> {
 
-        if (useRag && !resourceList.isEmpty()) {
-            CompletableFuture.runAsync(() -> ingestResources(resourceList));
-        }
+                    List<Media> mediaList = filesData.stream()
+                            .map(fd -> new Media(fd.mimeType(), fd.resource()))
+                            .toList();
 
-        return callToolCallingClient(userId, question, mediaList);
+                    List<Resource> resourceList = filesData.stream()
+                            .map(FileData::resource)
+                            .toList();
+
+                    if (useRag && !resourceList.isEmpty()) {
+                        Mono.fromRunnable(() -> ingestResources(resourceList))
+                                .subscribeOn(Schedulers.boundedElastic())
+                                .subscribe();
+                    }
+
+                    return callToolCallingClient(userId, question, mediaList);
+                });
     }
 
     private Flux<String> callToolCallingClient(Long userId, String question, List<Media> mediaList) {
@@ -101,34 +114,41 @@ public class ChatBotService {
         }
     }
 
-    private List<FileData> convertResources(List<MultipartFile> files) {
-        if (files == null || files.isEmpty()) return List.of();
+    private Mono<List<FileData>> convertResources(List<FilePart> files) {
 
-        List<FileData> result = new ArrayList<>();
-
-        for (MultipartFile file : files) {
-            if (file.isEmpty()) continue;
-
-            try {
-                MimeType mime = Optional.ofNullable(file.getContentType())
-                        .map(MimeTypeUtils::parseMimeType)
-                        .orElse(MimeTypeUtils.APPLICATION_OCTET_STREAM);
-
-                Resource resource = new InputStreamResource(file.getInputStream()) {
-                    @Override
-                    public String getFilename() {
-                        return file.getOriginalFilename();
-                    }
-                };
-
-                result.add(new FileData(mime, resource));
-
-            } catch (Exception e) {
-                log.error("[ChatBot] Lỗi đọc file: {}", file.getOriginalFilename(), e);
-            }
+        if (files == null || files.isEmpty()) {
+            return Mono.just(List.of());
         }
 
-        return result;
+        return Flux.fromIterable(files)
+                .flatMap(file -> {
+
+                    MimeType mimeType = Optional.ofNullable(file.headers().getContentType())
+                            .orElse(MediaType.APPLICATION_OCTET_STREAM);
+
+                    return DataBufferUtils.join(file.content())
+                            .map(dataBuffer -> {
+
+                                byte[] bytes = new byte[dataBuffer.readableByteCount()];
+                                dataBuffer.read(bytes);
+
+                                DataBufferUtils.release(dataBuffer);
+
+                                Resource resource = new ByteArrayResource(bytes) {
+                                    @Override
+                                    public String getFilename() {
+                                        return file.filename();
+                                    }
+                                };
+
+                                return new FileData(mimeType, resource);
+                            })
+                            .onErrorResume(e -> {
+                                log.error("[ChatBot] Lỗi đọc file: {}", file.filename(), e);
+                                return Mono.empty();
+                            });
+                })
+                .collectList();
     }
 
     private void ingestResources(List<Resource> resources) {
