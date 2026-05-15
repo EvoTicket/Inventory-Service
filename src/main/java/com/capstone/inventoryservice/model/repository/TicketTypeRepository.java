@@ -45,4 +45,10 @@ public interface TicketTypeRepository extends JpaRepository<TicketType, Long> {
     AND (t.quantityTotal - t.quantitySold) >= :qty
     """)
     int increaseSold(Long id, long qty);
+
+    @Query("SELECT t FROM TicketType t " +
+            "JOIN FETCH t.showtime s " +
+            "JOIN FETCH s.event e " +
+            "WHERE t.id IN :ids")
+    List<TicketType> findAllByIdWithDetails(@Param("ids") Collection<Long> ids);
 }

@@ -61,4 +61,11 @@ public class InternalController {
         EventDetailInternalResponse eventDetailInternalResponse = EventDetailInternalResponse.toDto(event, showtime, organizerName);
         return ResponseEntity.ok(BaseResponse.ok(eventDetailInternalResponse));
     }
+
+    @GetMapping("/ticket-types/details")
+    public ResponseEntity<BaseResponse<List<TicketTypeInternalResponse>>> getTicketDetails(
+            @RequestBody List<Long> ticketTypeIds
+    ) {
+        return ResponseEntity.ok(BaseResponse.ok(ticketTypeService.getTicketDetailsInternal(ticketTypeIds)));
+    }
 }

@@ -4,6 +4,7 @@ import com.capstone.inventoryservice.domain.dto.request.CreateTicketTypeRequest;
 import com.capstone.inventoryservice.domain.dto.request.OrderItemRequest;
 import com.capstone.inventoryservice.domain.dto.request.UpdateTicketTypeRequest;
 import com.capstone.inventoryservice.domain.client.ListTicketTypesInternalResponse;
+import com.capstone.inventoryservice.domain.client.TicketTypeInternalResponse;
 import com.capstone.inventoryservice.domain.dto.response.TicketTypeResponse;
 import com.capstone.inventoryservice.model.entity.Showtime;
 import com.capstone.inventoryservice.model.entity.TicketType;
@@ -152,5 +153,23 @@ public class TicketTypeService {
 
         ticketTypeRepository.delete(ticketType);
         return true;
+    }
+
+    @Transactional(readOnly = true)
+    public List<TicketTypeInternalResponse> getTicketDetailsInternal(List<Long> ticketTypeIds) {
+        List<TicketType> ticketTypes = ticketTypeRepository.findAllByIdWithDetails(ticketTypeIds);
+        return ticketTypes.stream().map(t -> TicketTypeInternalResponse.builder()
+                .ticketTypeId(t.getId())
+                .eventId(t.getShowtime().getEvent().getId())
+                .eventName(t.getShowtime().getEvent().getEventName())
+                .showtimeId(t.getShowtime().getId())
+                .eventStartTime(t.getShowtime().getStartDatetime())
+                .eventEndTime(t.getShowtime().getEndDatetime())
+                .venueName(t.getShowtime().getVenue())
+                .venueAddress(t.getShowtime().getFullAddress())
+                .bannerImage(t.getShowtime().getEvent().getBannerImage())
+                .ticketTypeName(t.getTypeName())
+                .originalPrice(t.getPrice())
+                .build()).toList();
     }
 }
