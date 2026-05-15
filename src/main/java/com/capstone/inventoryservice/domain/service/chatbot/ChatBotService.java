@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +53,7 @@ public class ChatBotService {
 
     public record FileData(MimeType mimeType, Resource resource) {}
 
-    public String chat(String question, List<MultipartFile> files, boolean useRag) {
+    public Flux<String> chat(String question, List<MultipartFile> files, boolean useRag) {
         Long userId = jwtUtil.getDataFromAuth().userId();
 
         List<FileData> filesData = convertResources(files);
@@ -70,7 +71,7 @@ public class ChatBotService {
         return callToolCallingClient(userId, question, mediaList);
     }
 
-    private String callToolCallingClient(Long userId, String question, List<Media> mediaList) {
+    private Flux<String> callToolCallingClient(Long userId, String question, List<Media> mediaList) {
         try {
             String fullQuestion = (userId != null)
                     ? question + "\n\n[Thông tin phiên: userId=" + userId + ", dùng giá trị này khi gọi tool cần userId]"
@@ -92,7 +93,7 @@ public class ChatBotService {
                         }
                     })
                     .tools(evoTicketTools)
-                    .call()
+                    .stream()
                     .content();
         } catch (Exception e) {
             log.error("[ChatBot] Lỗi khi gọi AI (Tool Calling): {}", e.getMessage(), e);

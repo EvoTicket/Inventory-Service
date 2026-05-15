@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 
@@ -20,8 +21,8 @@ import java.util.List;
 public class ChatBotController {
     private final ChatBotService chatBotService;
 
-    @PostMapping(value = "/ask", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<BaseResponse<ChatBotResponse>> smartChat(
+    @PostMapping(value = "/ask", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> smartChat(
             @RequestParam String question,
 
             @Parameter(
@@ -30,13 +31,7 @@ public class ChatBotController {
             @RequestParam(value = "files", required = false) List<MultipartFile> files,
             @RequestParam(value = "useRag", required = false, defaultValue = "false") boolean useRag
     ) {
-        String answer = chatBotService.chat(question, files, useRag);
-        BaseResponse<ChatBotResponse> response = BaseResponse.ok(
-                ChatBotResponse.builder()
-                .answer(answer)
-                .build()
-        );
-        return ResponseEntity.ok(response);
+        return chatBotService.chat(question, files, useRag);
     }
 
     @GetMapping("/history")
