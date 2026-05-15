@@ -23,7 +23,7 @@ public class ChatBotController {
     private final ChatBotService chatBotService;
 
     @PostMapping(value = "/ask", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> smartChat(
+    public ResponseEntity<Flux<String>> smartChat(
             @RequestPart
             @Parameter(description = "Câu hỏi của người dùng")
             String question,
@@ -32,7 +32,13 @@ public class ChatBotController {
             @Parameter(description = "Tệp đính kèm", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE))
             List<FilePart> files
     ) {
-        return chatBotService.chat(question, files, false);
+        Flux<String> chatFlux = chatBotService.chat(question, files, false);
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_EVENT_STREAM)
+                .header("X-Accel-Buffering", "no")
+                .header("Cache-Control", "no-cache, no-transform")
+                .header("Connection", "keep-alive")
+                .body(chatFlux);
     }
 
     @GetMapping("/history")
