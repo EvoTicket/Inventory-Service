@@ -16,6 +16,8 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -108,8 +110,8 @@ public class EvoTicketTools {
 
     @Tool(description = """
             Tìm sự kiện theo danh mục (category).
-            Danh mục hợp lệ: MUSIC, SPORT, THEATER, FESTIVAL, CONFERENCE, EXHIBITION, WORKSHOP, STAGE_ART, LIVESTAGE, OTHER.
-            Dùng khi user hỏi về loại sự kiện cụ thể như: nhạc, thể thao, triển lãm, workshop...
+            Danh mục hợp lệ: LIVESTAGE, STAGE_ART, WORKSHOP, SPORTS, EXHIBITION.
+            Dùng khi user hỏi về loại sự kiện cụ thể như: sân khấu, nghệ thuật, thể thao, hội thảo...
             """)
     @Transactional(readOnly = true)
     public String getEventsByCategory(
@@ -272,10 +274,74 @@ public class EvoTicketTools {
     }
 
     @Tool(description = """
-            Lấy danh sách tất cả danh mục (category) sự kiện trong hệ thống EvoTicket.
-            Trả về tên và mô tả của từng danh mục.
-            Dùng khi user hỏi: có những loại sự kiện gì, danh mục sự kiện, thể loại.
+            Lấy danh sách các sự kiện có lượt xem cao nhất.
+            Dùng khi user hỏi: sự kiện nào được quan tâm nhiều nhất, sự kiện được xem nhiều nhất.
             """)
+    @Transactional(readOnly = true)
+    public String getMostViewedEvents(
+            @ToolParam(description = "Số lượng sự kiện muốn lấy, mặc định là 5") Integer limit
+    ) {
+        int actualLimit = (limit == null || limit <= 0) ? 5 : limit;
+        log.info("[Tool] getMostViewedEvents called with limit={}", actualLimit);
+
+        Page<Event> events = eventRepository.findMostViewedEvents(PageRequest.of(0, actualLimit));
+        if (events.isEmpty()) return "Hiện chưa có dữ liệu lượt xem.";
+
+        StringBuilder sb = new StringBuilder("=== SỰ KIỆN XEM NHIỀU NHẤT ===\n");
+        events.forEach(e -> sb.append(formatEventSummary(e)));
+        return sb.toString();
+    }
+
+    @Tool(description = """
+            Lấy danh sách các sự kiện đang hot nhất, được mua nhiều nhất và xem nhiều nhất.
+            Trả về danh sách sự kiện kèm theo các chỉ số phổ biến.
+            Dùng khi user hỏi: sự kiện nào đang hot, sự kiện được mua nhiều nhất, top sự kiện, hot nhất.
+            """)
+    @Transactional(readOnly = true)
+    public String getTrendingEvents(
+            @ToolParam(description = "Số lượng sự kiện muốn lấy, mặc định là 5") Integer limit
+    ) {
+        int actualLimit = (limit == null || limit <= 0) ? 5 : limit;
+        log.info("[Tool] getTrendingEvents called with limit={}", actualLimit);
+
+        Page<Event> trending = eventRepository.findTrendingEvents(LocalDateTime.now(), PageRequest.of(0, actualLimit));
+        if (trending.isEmpty()) return "Hiện chưa có thống kê sự kiện hot.";
+
+        StringBuilder sb = new StringBuilder("=== SỰ KIỆN HOT NHẤT ===\n");
+        trending.forEach(e -> sb.append(formatEventSummary(e)));
+        return sb.toString();
+    }
+
+    @Tool(description = """
+            Trả về câu trả lời cho các câu hỏi thường gặp (FAQ) về hệ thống EvoTicket như: 
+            Cách mua vé, cách thanh toán, quy định hoàn tiền, hỗ trợ khách hàng, vé điện tử, blockchain.
+            Dùng khi user hỏi các câu hỏi chung về quy trình hoặc quy định của hệ thống.
+            """)
+    public String getFAQ() {
+        log.info("[Tool] getFAQ called");
+        return """
+                === CÂU HỎI THƯỜNG GẶP (FAQ) ===
+                
+                1. Làm thế nào để mua vé trên EvoTicket?
+                   Bạn chỉ cần chọn sự kiện yêu thích, chọn suất diễn và loại vé, sau đó nhấn 'Mua ngay'. Hệ thống hỗ trợ thanh toán qua VNPay và các ví điện tử phổ biến.
+                
+                2. Tôi nhận vé bằng cách nào?
+                   Sau khi thanh toán thành công, vé điện tử dưới dạng QR Code sẽ được gửi về Email của bạn và hiển thị trong mục 'Vé của tôi' trên website.
+                
+                3. Quy định về việc hoàn trả hoặc hủy vé?
+                   Việc hoàn trả vé phụ thuộc vào chính sách riêng của từng Ban tổ chức (BTC). Bạn có thể xem thông tin này trong phần mô tả sự kiện hoặc liên hệ trực tiếp với BTC.
+                
+                4. Tại sao EvoTicket sử dụng Blockchain?
+                   Chúng tôi sử dụng Blockchain để định danh mỗi chiếc vé, đảm bảo vé không thể bị làm giả, giúp bạn an tâm khi mua vé và hỗ trợ chuyển nhượng vé an toàn.
+                
+                5. Tôi có thể chuyển nhượng vé cho người khác không?
+                   Có, bạn có thể sử dụng tính năng 'Ký gửi/Chuyển nhượng' trong mục quản lý vé để bán lại hoặc tặng vé cho người khác một cách minh bạch.
+                
+                6. Làm sao để liên hệ với bộ phận hỗ trợ khách hàng?
+                   Bạn có thể gửi yêu cầu qua email support@evoticket.com hoặc liên hệ Fanpage EvoTicket để được hỗ trợ nhanh nhất.
+                """;
+    }
+
     public String getAllCategories() {
         log.info("[Tool] getAllCategories called");
         StringBuilder sb = new StringBuilder("=== DANH MỤC SỰ KIỆN EVOTICKET ===\n");

@@ -28,6 +28,9 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
             "e.createdAt ASC")
     Page<Event> findTrendingEvents(@Param("now") LocalDateTime now, Pageable pageable);
 
+    @Query("SELECT e FROM Event e WHERE e.isCancelled = false ORDER BY e.viewCount DESC")
+    Page<Event> findMostViewedEvents(Pageable pageable);
+
     @Query("""
             SELECT DISTINCT e
             FROM Event e
