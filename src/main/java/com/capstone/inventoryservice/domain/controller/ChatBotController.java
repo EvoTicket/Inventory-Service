@@ -33,12 +33,18 @@ public class ChatBotController {
             List<FilePart> files
     ) {
         Flux<String> chatFlux = chatBotService.chat(question, files, false);
+
+        // Tạo một đoạn padding (comment SSE) khoảng 2KB để "phá" bộ đệm của Proxy (Nginx/Cloudflare)
+        // Dấu ":" ở đầu dòng là comment trong SSE, trình duyệt sẽ bỏ qua nội dung này.
+        String padding = ":" + " ".repeat(2048) + "\n\n";
+        Flux<String> paddedFlux = Flux.concat(Flux.just(padding), chatFlux);
+
         return ResponseEntity.ok()
                 .contentType(MediaType.TEXT_EVENT_STREAM)
                 .header("X-Accel-Buffering", "no")
                 .header("Cache-Control", "no-cache, no-transform")
                 .header("Connection", "keep-alive")
-                .body(chatFlux);
+                .body(paddedFlux);
     }
 
     @GetMapping("/history")
