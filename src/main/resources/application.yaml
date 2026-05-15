@@ -35,7 +35,7 @@ spring:
             initialize-schema: always
     vectorstore:
       pgvector:
-        initialize-schema: always
+        initialize-schema: true
         schema-name: inventory_service
         index-type: HNSW
         distance-type: COSINE_DISTANCE
