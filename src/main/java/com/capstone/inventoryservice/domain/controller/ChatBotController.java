@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,29 +23,23 @@ import java.util.List;
 public class ChatBotController {
     private final ChatBotService chatBotService;
 
-    @PostMapping(value = "/ask", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public ResponseEntity<Flux<String>> smartChat(
-            @RequestPart
-            @Parameter(description = "Câu hỏi của người dùng")
-            String question,
+    @PostMapping(value = "/ask", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<BaseResponse<ChatBotResponse>> smartChat(
+            @RequestParam String question,
 
-            @RequestPart(required = false)
-            @Parameter(description = "Tệp đính kèm", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE))
-            List<FilePart> files
+            @Parameter(
+                    content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)
+            )
+            @RequestParam(value = "files", required = false) List<MultipartFile> files,
+            @RequestParam(value = "useRag", required = false, defaultValue = "false") boolean useRag
     ) {
-        Flux<String> chatFlux = chatBotService.chat(question, files, false);
-
-        // Tạo một đoạn padding (comment SSE) khoảng 2KB để "phá" bộ đệm của Proxy (Nginx/Cloudflare)
-        // Dấu ":" ở đầu dòng là comment trong SSE, trình duyệt sẽ bỏ qua nội dung này.
-        String padding = ":" + " ".repeat(2048) + "\n\n";
-        Flux<String> paddedFlux = Flux.concat(Flux.just(padding), chatFlux);
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.TEXT_EVENT_STREAM)
-                .header("X-Accel-Buffering", "no")
-                .header("Cache-Control", "no-cache, no-transform")
-                .header("Connection", "keep-alive")
-                .body(paddedFlux);
+        String answer = chatBotService.chat(question, files, useRag);
+        BaseResponse<ChatBotResponse> response = BaseResponse.ok(
+                ChatBotResponse.builder()
+                        .answer(answer)
+                        .build()
+        );
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/history")
