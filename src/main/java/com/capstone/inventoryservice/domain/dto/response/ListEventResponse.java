@@ -3,6 +3,7 @@ package com.capstone.inventoryservice.domain.dto.response;
 import com.capstone.inventoryservice.model.entity.Event;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
+import com.capstone.inventoryservice.model.enums.EventApprovalStatus;
 import com.capstone.inventoryservice.model.enums.EventCategory;
 import com.capstone.inventoryservice.model.enums.TicketAvailabilityStatus;
 import lombok.AllArgsConstructor;
@@ -30,6 +31,7 @@ public class ListEventResponse {
     private LocalDateTime startDatetime;
     private LocalDateTime endDatetime;
     private EventStatus eventStatus;
+    private EventApprovalStatus approvalStatus;
     private EventType eventType;
 
     private String bannerImage;
@@ -69,6 +71,7 @@ public class ListEventResponse {
                 .startDatetime(event.getEarliestStart())
                 .endDatetime(event.getLatestEnd())
                 .eventStatus(event.getEventStatus())
+                .approvalStatus(event.getApprovalStatus())
                 .eventType(event.getEventType())
                 .bannerImage(event.getBannerImage())
                 .thumbnailImage(event.getThumbnailImage())

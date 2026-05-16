@@ -59,6 +59,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/internal/**").hasRole("INTERNAL_SERVICE")
 
                         .requestMatchers(HttpMethod.GET, "/api/locations/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET,"/api/events/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .anyRequest().authenticated()

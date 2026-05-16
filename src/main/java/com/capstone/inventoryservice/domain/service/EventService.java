@@ -72,6 +72,7 @@ public class EventService {
 
     @Transactional(readOnly = true)
     public BasePageResponse<ListEventResponse> getEvents(EventFilterRequest filter) {
+        filter.setApprovalStatuses(List.of(EventApprovalStatus.ACCEPTED));
         Specification<Event> spec = EventSpecification.withFilters(filter);
         Pageable pageable = buildPageable(filter);
 
@@ -89,13 +90,13 @@ public class EventService {
         Page<Event> upcomingEvents = eventRepository.findUpcomingEvents(now, oneMonthLater, pageable);
         List<ListEventResponse> upcomingResponses = mapToResponseList(upcomingEvents.getContent());
 
-        Page<Event> livestageEvents = eventRepository.findByCategory(EventCategory.LIVESTAGE, pageable);
+        Page<Event> livestageEvents = eventRepository.findAcceptedByCategory(EventCategory.LIVESTAGE, pageable);
         List<ListEventResponse> livestageResponses = mapToResponseList(livestageEvents.getContent());
 
-        Page<Event> stageArtEvents = eventRepository.findByCategory(EventCategory.STAGE_ART, pageable);
+        Page<Event> stageArtEvents = eventRepository.findAcceptedByCategory(EventCategory.STAGE_ART, pageable);
         List<ListEventResponse> stageArtResponses = mapToResponseList(stageArtEvents.getContent());
 
-        Page<Event> workshopEvents = eventRepository.findByCategory(EventCategory.WORKSHOP, pageable);
+        Page<Event> workshopEvents = eventRepository.findAcceptedByCategory(EventCategory.WORKSHOP, pageable);
         List<ListEventResponse> workshopResponses = mapToResponseList(workshopEvents.getContent());
 
         return HomepageResponse.builder()
@@ -221,6 +222,9 @@ public class EventService {
     @Transactional
     public EventResponse getEventById(Long eventId) {
         Event event = eventUtil.getEventOrElseThrow(eventId);
+        if (event.getApprovalStatus() != EventApprovalStatus.ACCEPTED) {
+            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Event not found with id: " + eventId);
+        }
         recordView(event);
         return convertToDTO(event);
     }
@@ -259,8 +263,11 @@ public class EventService {
                 .address(request.getAddress())
                 .eventType(request.getEventType())
                 .totalSeats(request.getTotalSeats())
+                .introduction(request.getIntroduction())
+                .checkers(request.getCheckers())
                 .organizerId(orgId)
                 .isFeatured(request.getIsFeatured() != null && request.getIsFeatured())
+                .approvalStatus(EventApprovalStatus.PENDING)
                 .category(request.getCategory())
                 .province(locationUtil.getProvinceByCode(request.getProvinceCode()))
                 .ward(locationUtil.getWardByCode(request.getWardCode()))
@@ -349,6 +356,27 @@ public class EventService {
         }
 
         return true;
+    }
+
+    @Transactional(readOnly = true)
+    public BasePageResponse<ListEventResponse> getPendingEventsForAdmin(EventFilterRequest filter) {
+        filter.setApprovalStatuses(List.of(EventApprovalStatus.PENDING));
+        Specification<Event> spec = EventSpecification.withFilters(filter);
+        Pageable pageable = buildPageable(filter);
+        Page<Event> eventPage = eventRepository.findAll(spec, pageable);
+        return buildEventPageResponse(eventPage, pageable);
+    }
+
+    @Transactional
+    public EventResponse updateApprovalStatus(Long eventId, EventApprovalStatus approvalStatus) {
+        if (approvalStatus == null || approvalStatus == EventApprovalStatus.PENDING) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Approval status must be ACCEPTED or REJECTED");
+        }
+
+        Event event = eventUtil.getEventOrElseThrow(eventId);
+        event.setApprovalStatus(approvalStatus);
+        Event savedEvent = eventRepository.save(event);
+        return convertToDTO(savedEvent);
     }
 
     @Transactional
@@ -502,6 +530,7 @@ public class EventService {
                 .venue(event.getVenue())
                 .address(event.getFullAddress())
                 .eventStatus(event.getEventStatus())
+                .approvalStatus(event.getApprovalStatus())
                 .eventType(event.getEventType())
                 .bannerImage(event.getBannerImage())
                 .thumbnailImage(event.getThumbnailImage())
@@ -638,6 +667,7 @@ public class EventService {
                 Specification.where(
                         EventSpecification.withFilters(
                                 EventFilterRequest.builder()
+                                        .approvalStatuses(List.of(EventApprovalStatus.ACCEPTED))
                                         .includeExpired(false)
                                         .ticketAvailabilityStatuses(List.of(TicketAvailabilityStatus.AVAILABLE))
                                         .build()
