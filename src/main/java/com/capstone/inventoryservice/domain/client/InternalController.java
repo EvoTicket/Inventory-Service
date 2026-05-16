@@ -62,7 +62,7 @@ public class InternalController {
         return ResponseEntity.ok(BaseResponse.ok(eventDetailInternalResponse));
     }
 
-    @GetMapping("/ticket-types/details")
+    @PostMapping("/ticket-types/details")
     public ResponseEntity<BaseResponse<List<TicketTypeInternalResponse>>> getTicketDetails(
             @RequestBody List<Long> ticketTypeIds
     ) {
