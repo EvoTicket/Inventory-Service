@@ -1,6 +1,7 @@
 package com.capstone.inventoryservice.domain.dto.response;
 
 import com.capstone.inventoryservice.domain.client.OrgInternalResponse;
+import com.capstone.inventoryservice.model.enums.EventApprovalStatus;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
 import com.capstone.inventoryservice.model.enums.EventCategory;
@@ -22,6 +23,7 @@ public class EventResponse {
     private String venue;
     private String address;
     private EventStatus eventStatus;
+    private EventApprovalStatus approvalStatus;
     private EventType eventType;
     private String bannerImage;
     private String thumbnailImage;

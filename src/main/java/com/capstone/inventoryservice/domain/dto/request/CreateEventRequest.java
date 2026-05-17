@@ -44,6 +44,10 @@ public class CreateEventRequest {
 
     private BigDecimal longitude;
 
+    private String introduction;
+
+    private Long checkers;
+
     @NotNull(message = "Category is required")
     private EventCategory category;
 
