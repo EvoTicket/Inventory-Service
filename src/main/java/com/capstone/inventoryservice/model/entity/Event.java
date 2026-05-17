@@ -77,7 +77,8 @@ public class Event {
     private Boolean isFeatured;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "approval_status")
+    @Column(name = "approval_status", nullable = false)
+    @Builder.Default
     private EventApprovalStatus approvalStatus = EventApprovalStatus.PENDING;
 
     @Enumerated(EnumType.STRING)
@@ -121,6 +122,12 @@ public class Event {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (approvalStatus == null) {
+            approvalStatus = EventApprovalStatus.PENDING;
+        }
+        if (isCancelled == null) {
+            isCancelled = false;
+        }
     }
 
     @PreUpdate
