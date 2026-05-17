@@ -1,0 +1,135 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: inventory-service
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET_KEY}
+    internal:
+      secret-key: ${INTERNAL_SERVICE_SECRET_KEY}
+      token-expiration: 3600000
+      enabled: true
+      service-name: inventory-service
+      allowed-services:
+        - order-service
+  ai:
+    google:
+      genai:
+        api-key: ${GEMINI_KEY}
+        chat:
+          options:
+            model: gemini-3.1-flash-lite
+            temperature: 0.3
+        embedding:
+          text:
+            options:
+              model: gemini-embedding-001
+              dimensions: 1536
+          api-key: ${GEMINI_KEY}
+    chat:
+      memory:
+        repository:
+          jdbc:
+            initialize-schema: always
+    vectorstore:
+      pgvector:
+        initialize-schema: true
+        schema-name: inventory_service
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 1536
+        max-document-batch-size: 10000
+  data:
+    redis:
+      url: ${REDIS_URL}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 30000
+      max-lifetime: 1800000
+      maximum-pool-size: 10
+      minimum-idle: 5
+      schema: inventory_service
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: inventory_service
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+  codec:
+    max-in-memory-size: 20MB
+  main:
+    allow-bean-definition-overriding: true
+
+swagger:
+  host-url: http://localhost:${server.port}
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_NAME}
+  api-key: ${CLOUDINARY_KEY}
+  api-secret: ${CLOUDINARY_SECRET}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.value}
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+  show-actuator: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  tracing:
+    sampling:
+      probability: 0.1
+  otlp:
+    tracing:
+      endpoint: http://otel-collector:4318/v1/traces
+
+
+logging:
+  level:
+    org:
+      hibernate:
+        SQL: debug
+        type:
+          descriptor: trace
+  pattern:
+    level: "%5p [traceId=%X{traceId}, spanId=%X{spanId}]"
