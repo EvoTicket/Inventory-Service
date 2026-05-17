@@ -6,6 +6,7 @@ import com.capstone.inventoryservice.domain.client.PlatformStatsInternalResponse
 import com.capstone.inventoryservice.domain.dto.response.PlatformDashboardResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -20,6 +21,7 @@ import com.capstone.inventoryservice.model.entity.Event;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class DashboardService {
     private final OrderFeignClient orderFeignClient;
     private final IAMFeignClient iamFeignClient;
