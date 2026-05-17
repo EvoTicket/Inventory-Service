@@ -61,6 +61,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/locations/**").permitAll()
                         .requestMatchers(HttpMethod.GET,"/api/events/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
+                        .requestMatchers("/api/banks/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(internalAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
