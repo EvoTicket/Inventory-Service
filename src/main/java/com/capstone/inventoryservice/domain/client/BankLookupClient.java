@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 
 @Component
 @RequiredArgsConstructor
@@ -16,6 +18,7 @@ import org.springframework.web.client.RestClientResponseException;
 public class BankLookupClient {
 
     private final RestClient restClient;
+    private final ObjectMapper objectMapper;
 
     @Value("${banklookup.api-key}")
     private String apiKey;
@@ -23,9 +26,28 @@ public class BankLookupClient {
     @Value("${banklookup.api-secret}")
     private String apiSecret;
 
+    @PostConstruct
+    public void init() {
+        log.info("=== [BankLookupClient] Checking Credentials on Startup ===");
+        log.info("API Key loaded: {}", (apiKey == null || apiKey.isBlank() || apiKey.startsWith("${")) 
+                ? "NOT_FOUND/MISSING" 
+                : "PRESENT (length=" + apiKey.length() + ", mask=" + maskString(apiKey) + ")");
+        log.info("API Secret loaded: {}", (apiSecret == null || apiSecret.isBlank() || apiSecret.startsWith("${")) 
+                ? "NOT_FOUND/MISSING" 
+                : "PRESENT (length=" + apiSecret.length() + ", mask=" + maskString(apiSecret) + ")");
+        log.info("==========================================================");
+    }
+
+    private String maskString(String str) {
+        if (str == null || str.length() <= 8) {
+            return "***";
+        }
+        return str.substring(0, 4) + "..." + str.substring(str.length() - 4);
+    }
+
     public String getOwnerName(String bankCode, String accountNumber) {
         try {
-            BankLookupResponse response = restClient.post()
+            String responseStr = restClient.post()
                     .uri("https://api.banklookup.net")
                     .header("x-api-key", apiKey)
                     .header("x-api-secret", apiSecret)
@@ -49,12 +71,20 @@ public class BankLookupClient {
                                 throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Bank lookup server error");
                             }
                     )
-                    .body(BankLookupResponse.class);
+                    .body(String.class);
 
-            log.info("Bank lookup successful: {}", response);
+            log.info("Bank lookup successful. Raw response: {}", responseStr);
 
-            if (response == null) {
+            if (responseStr == null || responseStr.isBlank()) {
                 throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Không nhận được phản hồi từ bank lookup");
+            }
+
+            BankLookupResponse response;
+            try {
+                response = objectMapper.readValue(responseStr, BankLookupResponse.class);
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                log.error("Failed to parse bank lookup response: {}", responseStr, e);
+                throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Lỗi phân tích phản hồi từ bank lookup");
             }
 
             if (!Boolean.TRUE.equals(response.getSuccess())) {
