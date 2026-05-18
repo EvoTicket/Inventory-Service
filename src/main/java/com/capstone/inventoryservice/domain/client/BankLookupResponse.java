@@ -16,5 +16,7 @@ public class BankLookupResponse {
     @Data
     public static class DataResponse {
         private String ownerName;
+        private String bank;
+        private String account;
     }
 }
