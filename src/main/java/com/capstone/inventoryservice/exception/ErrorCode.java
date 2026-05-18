@@ -22,6 +22,7 @@ public enum ErrorCode {
     FILE_UPLOAD_ERROR("FILE_UPLOAD_ERROR", "Lỗi khi upload tệp.", HttpStatus.BAD_REQUEST),
     BAD_JSON("BAD_JSON", "Dữ liệu đầu vào không hợp lệ hoặc không đọc được JSON.", HttpStatus.BAD_REQUEST),
     BOOKING_SESSION_NOT_FOUND("BOOKING_SESSION_NOT_FOUND", "Phiên đặt vé không tồn tại hoặc đã hết hạn", HttpStatus.NOT_FOUND),
+    TOO_MANY_REQUESTS("TOO_MANY_REQUESTS", "Quá nhiều yêu cầu, vui lòng thử lại sau", HttpStatus.TOO_MANY_REQUESTS)
     ;
 
 
