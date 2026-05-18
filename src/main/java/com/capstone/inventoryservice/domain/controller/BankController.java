@@ -35,7 +35,7 @@ public class BankController {
         return ResponseEntity.ok(BaseResponse.ok("Lấy danh sách ngân hàng thành công", banks));
     }
 
-    @GetMapping
+    @GetMapping("/owner-name")
     @Operation(summary = "Lấy ownerName")
     public ResponseEntity<BaseResponse<String>> getOwnerName(
             @RequestParam String bankCode,
