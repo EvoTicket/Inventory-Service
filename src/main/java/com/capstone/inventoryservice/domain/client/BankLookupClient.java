@@ -31,7 +31,6 @@ public class BankLookupClient {
                     .header("x-api-secret", apiSecret)
                     .body(new BankLookupRequest(bankCode, accountNumber))
                     .retrieve()
-
                     .onStatus(
                             HttpStatusCode::is4xxClientError,
                             (request, clientResponse) -> {
@@ -44,18 +43,15 @@ public class BankLookupClient {
                                 }
                             }
                     )
-
                     .onStatus(
                             HttpStatusCode::is5xxServerError,
                             (request, clientResponse) -> {
                                 throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Bank lookup server error");
                             }
                     )
-                    .onStatus(HttpStatusCode::is2xxSuccessful,
-                            (request, clientResponse) -> log.info("Bank lookup successful: {}", clientResponse.getBody())
-                     )
                     .body(BankLookupResponse.class);
 
+            log.info("Bank lookup successful: {}", response);
 
             if (response == null) {
                 throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Không nhận được phản hồi từ bank lookup");
