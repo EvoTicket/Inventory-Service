@@ -11,6 +11,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
+import org.springframework.http.ResponseEntity;
 
 @Component
 @RequiredArgsConstructor
@@ -47,10 +48,13 @@ public class BankLookupClient {
 
     public String getOwnerName(String bankCode, String accountNumber) {
         try {
-            String responseStr = restClient.post()
+            ResponseEntity<String> responseEntity = restClient.post()
                     .uri("https://api.banklookup.net")
                     .header("x-api-key", apiKey)
                     .header("x-api-secret", apiSecret)
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+                    .header("Accept", "application/json")
+                    .header("Content-Type", "application/json")
                     .body(new BankLookupRequest(bankCode, accountNumber))
                     .retrieve()
                     .onStatus(
@@ -71,9 +75,11 @@ public class BankLookupClient {
                                 throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Bank lookup server error");
                             }
                     )
-                    .body(String.class);
+                    .toEntity(String.class);
 
-            log.info("Bank lookup successful. Raw response: {}", responseStr);
+            String responseStr = responseEntity.getBody();
+            log.info("Bank lookup response. Status: {}, Headers: {}, Raw response: {}", 
+                    responseEntity.getStatusCode(), responseEntity.getHeaders(), responseStr);
 
             if (responseStr == null || responseStr.isBlank()) {
                 throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, "Không nhận được phản hồi từ bank lookup");
