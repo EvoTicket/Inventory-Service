@@ -4,9 +4,10 @@ import com.capstone.inventoryservice.domain.dto.BaseResponse;
 import com.capstone.inventoryservice.domain.dto.request.AssignCheckerRequest;
 import com.capstone.inventoryservice.domain.dto.request.ApproveCheckerRequest;
 import com.capstone.inventoryservice.domain.dto.response.EventResponse;
-import com.capstone.inventoryservice.domain.dto.response.ShowtimeResponse;
 import com.capstone.inventoryservice.domain.dto.response.ShowtimeCheckerResponse;
+import com.capstone.inventoryservice.domain.dto.response.CheckerEventResponse;
 import com.capstone.inventoryservice.domain.service.ShowtimeCheckerService;
+import com.capstone.inventoryservice.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,7 @@ import java.util.List;
 public class ShowtimeCheckerController {
 
     private final ShowtimeCheckerService showtimeCheckerService;
+    private final JwtUtil jwtUtil;
 
     // Admin gán trực tiếp checker vào showtime
     @PostMapping("/showtimes/{showtimeId}/checkers/assign")
@@ -51,39 +53,12 @@ public class ShowtimeCheckerController {
         return ResponseEntity.ok(BaseResponse.ok(response));
     }
 
-    // Xem danh sách checker theo showtime
-    @GetMapping("/showtimes/{showtimeId}/checkers")
-    public ResponseEntity<BaseResponse<List<ShowtimeCheckerResponse>>> getCheckersByShowtime(
-            @PathVariable Long showtimeId
-    ) {
-        List<ShowtimeCheckerResponse> response = showtimeCheckerService.getCheckersByShowtime(showtimeId);
-        return ResponseEntity.ok(BaseResponse.ok(response));
-    }
-
-    // Xem danh sách showtime của một checker
-    @GetMapping("/checkers/{checkerId}/showtimes")
-    public ResponseEntity<BaseResponse<List<ShowtimeCheckerResponse>>> getShowtimesForChecker(
-            @PathVariable Long checkerId
-    ) {
-        List<ShowtimeCheckerResponse> response = showtimeCheckerService.getShowtimesForChecker(checkerId);
-        return ResponseEntity.ok(BaseResponse.ok(response));
-    }
-
     // Xem danh sách event mà checker tham gia vào (đã xác nhận)
-    @GetMapping("/checkers/{checkerId}/approved-events")
-    public ResponseEntity<BaseResponse<List<EventResponse>>> getApprovedEventsForChecker(
-            @PathVariable Long checkerId
+    @GetMapping("/checkers/approved-events")
+    public ResponseEntity<BaseResponse<List<CheckerEventResponse>>> getApprovedEventsForChecker(
     ) {
-        List<EventResponse> response = showtimeCheckerService.getApprovedEventsForChecker(checkerId);
-        return ResponseEntity.ok(BaseResponse.ok(response));
-    }
-
-    // Xem danh sách showtime mà checker tham gia vào (đã xác nhận)
-    @GetMapping("/checkers/{checkerId}/approved-showtimes")
-    public ResponseEntity<BaseResponse<List<ShowtimeResponse>>> getApprovedShowtimesForChecker(
-            @PathVariable Long checkerId
-    ) {
-        List<ShowtimeResponse> response = showtimeCheckerService.getApprovedShowtimesForChecker(checkerId);
+        Long checkerId = jwtUtil.getDataFromAuth().userId();
+        List<CheckerEventResponse> response = showtimeCheckerService.getApprovedEventsForChecker(checkerId);
         return ResponseEntity.ok(BaseResponse.ok(response));
     }
 }

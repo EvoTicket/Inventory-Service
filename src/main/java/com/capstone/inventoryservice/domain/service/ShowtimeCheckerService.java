@@ -2,16 +2,17 @@ package com.capstone.inventoryservice.domain.service;
 
 import com.capstone.inventoryservice.domain.dto.request.AssignCheckerRequest;
 import com.capstone.inventoryservice.domain.dto.request.ApproveCheckerRequest;
-import com.capstone.inventoryservice.domain.dto.response.EventResponse;
-import com.capstone.inventoryservice.domain.dto.response.ShowtimeResponse;
 import com.capstone.inventoryservice.domain.dto.response.ShowtimeCheckerResponse;
+import com.capstone.inventoryservice.domain.dto.response.CheckerEventResponse;
 import com.capstone.inventoryservice.domain.mapper.ShowtimeCheckerMapper;
 import com.capstone.inventoryservice.domain.util.ShowtimeUtil;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
+import com.capstone.inventoryservice.model.entity.Event;
 import com.capstone.inventoryservice.model.entity.Showtime;
 import com.capstone.inventoryservice.model.entity.ShowtimeChecker;
 import com.capstone.inventoryservice.model.enums.CheckerAssignmentStatus;
+import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.repository.ShowtimeCheckerRepository;
 import com.capstone.inventoryservice.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -19,8 +20,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -120,37 +124,56 @@ public class ShowtimeCheckerService {
     }
 
     @Transactional(readOnly = true)
-    public List<ShowtimeCheckerResponse> getCheckersByShowtime(Long showtimeId) {
-        // Validate showtime
-        showtimeUtil.getShowtimeOrElseThrow(showtimeId);
-
-        return showtimeCheckerRepository.findByShowtimeId(showtimeId).stream()
-                .map(showtimeCheckerMapper::convertToDTO)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<ShowtimeCheckerResponse> getShowtimesForChecker(Long checkerId) {
-        return showtimeCheckerRepository.findByCheckerId(checkerId).stream()
-                .map(showtimeCheckerMapper::convertToDTO)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<EventResponse> getApprovedEventsForChecker(Long checkerId) {
-        return showtimeCheckerRepository.findByCheckerId(checkerId).stream()
+    public List<CheckerEventResponse> getApprovedEventsForChecker(Long checkerId) {
+        List<ShowtimeChecker> assignments = showtimeCheckerRepository.findByCheckerId(checkerId).stream()
                 .filter(sc -> sc.getStatus() == CheckerAssignmentStatus.APPROVED)
-                .map(sc -> sc.getShowtime().getEvent())
-                .distinct()
-                .map(eventService::convertToDTO)
+                .filter(sc ->
+                        sc.getShowtime().getEvent().getEventStatus() != EventStatus.CANCELLED &&
+                        sc.getShowtime().getEvent().getEventStatus() != EventStatus.COMPLETED
+                )
                 .toList();
-    }
 
-    @Transactional(readOnly = true)
-    public List<ShowtimeResponse> getApprovedShowtimesForChecker(Long checkerId) {
-        return showtimeCheckerRepository.findByCheckerId(checkerId).stream()
-                .filter(sc -> sc.getStatus() == CheckerAssignmentStatus.APPROVED)
-                .map(sc -> eventService.convertShowtimeToDTO(sc.getShowtime()))
+
+        Map<Event, List<Showtime>> eventShowtimesMap = assignments.stream()
+                .collect(Collectors.groupingBy(
+                        sc -> sc.getShowtime().getEvent(),
+                        Collectors.mapping(ShowtimeChecker::getShowtime, Collectors.toList())
+                ));
+
+        return eventShowtimesMap.entrySet().stream()
+                .map(entry -> {
+                    Event event = entry.getKey();
+                    List<Showtime> approvedShowtimesForEvent = entry.getValue();
+
+                    List<CheckerEventResponse.CheckerShowtimeResponse> showtimeDTOs = approvedShowtimesForEvent.stream()
+                            .map(showtime -> {
+                                String provinceName = showtime.getProvince() != null ? showtime.getProvince().getName() : null;
+                                return CheckerEventResponse.CheckerShowtimeResponse.builder()
+                                        .showtimeId(showtime.getId())
+                                        .startDatetime(showtime.getStartDatetime())
+                                        .endDatetime(showtime.getEndDatetime())
+                                        .venue(showtime.getVenue())
+                                        .address(showtime.getAddress())
+                                        .fullAddress(showtime.getFullAddress())
+                                        .provinceName(provinceName)
+                                        .isCancelled(showtime.getIsCancelled())
+                                        .build();
+                            })
+                            .sorted(Comparator.comparing(CheckerEventResponse.CheckerShowtimeResponse::getStartDatetime))
+                            .toList();
+
+                    return CheckerEventResponse.builder()
+                            .eventId(event.getId())
+                            .eventName(event.getEventName())
+                            .description(event.getDescription())
+                            .venue(event.getVenue())
+                            .address(event.getFullAddress())
+                            .organizerId(event.getOrganizerId())
+                            .bannerImage(event.getBannerImage())
+                            .thumbnailImage(event.getThumbnailImage())
+                            .showtimes(showtimeDTOs)
+                            .build();
+                })
                 .toList();
     }
 
