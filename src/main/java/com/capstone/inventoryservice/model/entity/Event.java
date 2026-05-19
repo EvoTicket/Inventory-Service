@@ -108,8 +108,6 @@ public class Event {
 
     private BigDecimal longitude;
 
-    @Column(name = "checkers")
-    private Long checkers;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
