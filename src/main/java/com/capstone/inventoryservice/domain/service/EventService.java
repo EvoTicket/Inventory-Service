@@ -275,6 +275,17 @@ public class EventService {
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
                 .seatMapImage("http://res.cloudinary.com/dtjmj7ayn/image/upload/v1776688153/event/2/seat_map/eedd19b3-9edc-49b9-87f7-6531e86eee2b.jpg")
+                .tagLine(request.getTagLine())
+                .shortDescription(request.getShortDescription())
+                .contactEmail(request.getContactEmail())
+                .contactPhone(request.getContactPhone())
+                .allowMultipleTicketTypesPerOrder(request.getAllowMultipleTicketTypesPerOrder() != null && request.getAllowMultipleTicketTypesPerOrder())
+                .allowDiscountCode(request.getAllowDiscountCode() != null && request.getAllowDiscountCode())
+                .allowResale(request.getAllowResale() != null && request.getAllowResale())
+                .postPurchaseInstruction(request.getPostPurchaseInstruction())
+                .checkInInstruction(request.getCheckInInstruction())
+                .entryGateInstruction(request.getEntryGateInstruction())
+                .reconciliationNote(request.getReconciliationNote())
                 .build();
 
         List<TicketType> allTicketTypes = new ArrayList<>();
@@ -420,6 +431,39 @@ public class EventService {
         if (request.getBankInfoId() != null) {
             event.setBankInfoId(request.getBankInfoId());
         }
+        if (request.getTagLine() != null) {
+            event.setTagLine(request.getTagLine());
+        }
+        if (request.getShortDescription() != null) {
+            event.setShortDescription(request.getShortDescription());
+        }
+        if (request.getContactEmail() != null) {
+            event.setContactEmail(request.getContactEmail());
+        }
+        if (request.getContactPhone() != null) {
+            event.setContactPhone(request.getContactPhone());
+        }
+        if (request.getAllowMultipleTicketTypesPerOrder() != null) {
+            event.setAllowMultipleTicketTypesPerOrder(request.getAllowMultipleTicketTypesPerOrder());
+        }
+        if (request.getAllowDiscountCode() != null) {
+            event.setAllowDiscountCode(request.getAllowDiscountCode());
+        }
+        if (request.getAllowResale() != null) {
+            event.setAllowResale(request.getAllowResale());
+        }
+        if (request.getPostPurchaseInstruction() != null) {
+            event.setPostPurchaseInstruction(request.getPostPurchaseInstruction());
+        }
+        if (request.getCheckInInstruction() != null) {
+            event.setCheckInInstruction(request.getCheckInInstruction());
+        }
+        if (request.getEntryGateInstruction() != null) {
+            event.setEntryGateInstruction(request.getEntryGateInstruction());
+        }
+        if (request.getReconciliationNote() != null) {
+            event.setReconciliationNote(request.getReconciliationNote());
+        }
 
         Event updatedEvent = eventRepository.save(event);
         log.info("Updated event with ID: {}", eventId);
@@ -557,6 +601,17 @@ public class EventService {
                 .category(event.getCategory())
                 .latitude(event.getLatitude())
                 .longitude(event.getLongitude())
+                .tagLine(event.getTagLine())
+                .shortDescription(event.getShortDescription())
+                .contactEmail(event.getContactEmail())
+                .contactPhone(event.getContactPhone())
+                .allowMultipleTicketTypesPerOrder(event.getAllowMultipleTicketTypesPerOrder())
+                .allowDiscountCode(event.getAllowDiscountCode())
+                .allowResale(event.getAllowResale())
+                .postPurchaseInstruction(event.getPostPurchaseInstruction())
+                .checkInInstruction(event.getCheckInInstruction())
+                .entryGateInstruction(event.getEntryGateInstruction())
+                .reconciliationNote(event.getReconciliationNote())
                 .showtimes(showtimeDTOs)
                 .reviews(reviewDTOs)
                 .build();

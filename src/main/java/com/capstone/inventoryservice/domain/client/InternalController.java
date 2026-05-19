@@ -5,6 +5,7 @@ import com.capstone.inventoryservice.domain.dto.request.OrderItemRequest;
 import com.capstone.inventoryservice.domain.service.ShowtimeCheckerService;
 import com.capstone.inventoryservice.domain.service.TicketReserveService;
 import com.capstone.inventoryservice.domain.service.TicketTypeService;
+import com.capstone.inventoryservice.domain.util.EventUtil;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
 import com.capstone.inventoryservice.model.entity.Event;
@@ -26,6 +27,7 @@ public class InternalController {
     private final TicketTypeService ticketTypeService;
     private final TicketReserveService ticketReserveService;
     private final ShowtimeCheckerService showtimeCheckerService;
+    private final EventUtil eventUtil;
     private final TicketTypeRepository ticketTypeRepository;
     private final IAMFeignClient iamFeignClient;
 
@@ -76,5 +78,17 @@ public class InternalController {
     ) {
         boolean isAssigned = showtimeCheckerService.isCheckerAssigned(showtimeId, checkerId);
         return ResponseEntity.ok(isAssigned);
+    }
+
+    @GetMapping("/event/{eventId}/allow-discount-code")
+    public ResponseEntity<Boolean> getAllowDiscountCode(@PathVariable Long eventId) {
+        boolean isAllowDiscountCode = eventUtil.getEventOrElseThrow(eventId).getAllowDiscountCode();
+        return ResponseEntity.ok(isAllowDiscountCode);
+    }
+
+    @GetMapping("/event/{eventId}/allow-resale")
+    public ResponseEntity<Boolean> getAllowReservation(@PathVariable Long eventId) {
+        boolean isAllowReservation = eventUtil.getEventOrElseThrow(eventId).getAllowResale();
+        return ResponseEntity.ok(isAllowReservation);
     }
 }

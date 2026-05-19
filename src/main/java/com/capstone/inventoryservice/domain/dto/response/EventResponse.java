@@ -38,6 +38,17 @@ public class EventResponse {
     private EventCategory category;
     private BigDecimal latitude;
     private BigDecimal longitude;
+    private String tagLine;
+    private String shortDescription;
+    private String contactEmail;
+    private String contactPhone;
+    private Boolean allowMultipleTicketTypesPerOrder;
+    private Boolean allowDiscountCode;
+    private Boolean allowResale;
+    private String postPurchaseInstruction;
+    private String checkInInstruction;
+    private String entryGateInstruction;
+    private String reconciliationNote;
     private List<ShowtimeResponse> showtimes;
     private List<ReviewResponse> reviews;
 }

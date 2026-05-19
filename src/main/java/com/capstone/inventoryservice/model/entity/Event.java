@@ -79,6 +79,42 @@ public class Event {
     @Column(name = "is_featured")
     private Boolean isFeatured;
 
+    @Column(name = "tag_line")
+    private String tagLine;
+
+    @Column(name = "short_description")
+    private String shortDescription;
+
+    @Column(name = "contact_email")
+    private String contactEmail;
+
+    @Column(name = "contact_phone")
+    private String contactPhone;
+
+    @Column(name = "allow_multiple_ticket_types_per_order")
+    @Builder.Default
+    private Boolean allowMultipleTicketTypesPerOrder = false;
+
+    @Column(name = "allow_discount_code")
+    @Builder.Default
+    private Boolean allowDiscountCode = false;
+
+    @Column(name = "allow_resale")
+    @Builder.Default
+    private Boolean allowResale = false;
+
+    @Column(name = "post_purchase_instruction", columnDefinition = "TEXT")
+    private String postPurchaseInstruction;
+
+    @Column(name = "check_in_instruction", columnDefinition = "TEXT")
+    private String checkInInstruction;
+
+    @Column(name = "entry_gate_instruction", columnDefinition = "TEXT")
+    private String entryGateInstruction;
+
+    @Column(name = "reconciliation_note", columnDefinition = "TEXT")
+    private String reconciliationNote;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "approval_status", nullable = false)
     @Builder.Default
@@ -99,6 +135,9 @@ public class Event {
 
     @Formula("(SELECT COUNT(v.id) FROM inventory_service.event_views v WHERE v.event_id = id)")
     private Integer viewCount;
+
+    @Formula("(SELECT COUNT(sc.id) FROM inventory_service.showtime_checkers sc INNER JOIN inventory_service.showtimes s ON sc.showtime_id = s.id WHERE s.event_id = id)")
+    private Integer checkers;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -128,6 +167,15 @@ public class Event {
         }
         if (isCancelled == null) {
             isCancelled = false;
+        }
+        if (allowMultipleTicketTypesPerOrder == null) {
+            allowMultipleTicketTypesPerOrder = false;
+        }
+        if (allowDiscountCode == null) {
+            allowDiscountCode = false;
+        }
+        if (allowResale == null) {
+            allowResale = false;
         }
     }
 

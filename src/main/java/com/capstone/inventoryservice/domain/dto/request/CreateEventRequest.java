@@ -19,6 +19,36 @@ public class CreateEventRequest {
     @Size(max = 255, message = "Event name must not exceed 255 characters")
     private String eventName;
 
+    private String tagLine;
+
+    @NotBlank(message = "Short description is required")
+    @Size(max = 255, message = "Short description must not exceed 255 characters")
+    private String shortDescription;
+
+    @NotBlank(message = "Contact email is required")
+    @Email(message = "Contact email must be a valid email address")
+    private String contactEmail;
+
+    @NotBlank(message = "Contact phone is required")
+    private String contactPhone;
+
+    @Builder.Default
+    private Boolean allowMultipleTicketTypesPerOrder = false;
+
+    @Builder.Default
+    private Boolean allowDiscountCode = false;
+
+    @Builder.Default
+    private Boolean allowResale = false;
+
+    private String postPurchaseInstruction;
+
+    private String checkInInstruction;
+
+    private String entryGateInstruction;
+
+    private String reconciliationNote;
+
     @NotBlank(message = "Description is required")
     private String description;
 

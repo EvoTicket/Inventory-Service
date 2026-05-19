@@ -36,8 +36,28 @@ public class ReservationService {
     private static final long SESSION_TTL_MINUTES = 15;
 
     public ReserveResponse reserveTickets(ReserveRequest request) {
-        if(!ticketTypeRepository.existsByIdIn(request.getItems().stream().map(ReserveRequest.ReserveItem::getTicketTypeId).toList())) {
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Danh sách items không được rỗng");
+        }
+
+        List<Long> ticketTypeIds = request.getItems().stream()
+                .map(ReserveRequest.ReserveItem::getTicketTypeId)
+                .distinct()
+                .toList();
+
+        List<TicketType> ticketTypes = ticketTypeRepository.findAllById(ticketTypeIds);
+        if (ticketTypes.size() != ticketTypeIds.size()) {
             throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "One or more ticket types not found");
+        }
+
+        if (ticketTypeIds.size() > 1) {
+            for (TicketType tt : ticketTypes) {
+                var event = tt.getShowtime().getEvent();
+                if (event != null && !Boolean.TRUE.equals(event.getAllowMultipleTicketTypesPerOrder())) {
+                    throw new AppException(ErrorCode.BAD_REQUEST,
+                            "Sự kiện '" + event.getEventName() + "' không cho phép mua nhiều loại vé trong cùng một đơn hàng.");
+                }
+            }
         }
 
         List<ReserveRequest.ReserveItem> reservedItems = new ArrayList<>();
@@ -60,7 +80,6 @@ public class ReservationService {
         String dataKey = "booking:data:" + sessionId;
         Long userId = jwtUtil.getDataFromAuth().userId();
 
-        List<TicketType> ticketTypes = ticketTypeRepository.findAllById(request.getItems().stream().map(ReserveRequest.ReserveItem::getTicketTypeId).toList());
         if (ticketTypes.isEmpty()) {
             throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "No ticket types found");
         }
