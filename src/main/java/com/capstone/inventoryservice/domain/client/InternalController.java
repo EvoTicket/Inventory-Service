@@ -80,12 +80,6 @@ public class InternalController {
         return ResponseEntity.ok(isAssigned);
     }
 
-    @GetMapping("/event/{eventId}/allow-discount-code")
-    public ResponseEntity<Boolean> getAllowDiscountCode(@PathVariable Long eventId) {
-        boolean isAllowDiscountCode = eventUtil.getEventOrElseThrow(eventId).getAllowDiscountCode();
-        return ResponseEntity.ok(isAllowDiscountCode);
-    }
-
     @GetMapping("/event/{eventId}/allow-resale")
     public ResponseEntity<Boolean> getAllowReservation(@PathVariable Long eventId) {
         boolean isAllowReservation = eventUtil.getEventOrElseThrow(eventId).getAllowResale();
