@@ -502,7 +502,7 @@ public class EventService {
                 .build();
     }
 
-    private EventResponse convertToDTO(Event event) {
+    public EventResponse convertToDTO(Event event) {
         List<ShowtimeResponse> showtimeDTOs = null;
         if (event.getShowtimes() != null) {
             showtimeDTOs = event.getShowtimes().stream()
@@ -547,7 +547,7 @@ public class EventService {
                 .build();
     }
 
-    private ShowtimeResponse convertShowtimeToDTO(Showtime showtime) {
+    public ShowtimeResponse convertShowtimeToDTO(Showtime showtime) {
         List<TicketTypeResponse> ticketTypeDTOs = null;
         if (showtime.getTicketTypes() != null) {
             ticketTypeDTOs = showtime.getTicketTypes().stream()

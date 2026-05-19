@@ -2,6 +2,7 @@ package com.capstone.inventoryservice.domain.client;
 
 import com.capstone.inventoryservice.domain.dto.BaseResponse;
 import com.capstone.inventoryservice.domain.dto.request.OrderItemRequest;
+import com.capstone.inventoryservice.domain.service.ShowtimeCheckerService;
 import com.capstone.inventoryservice.domain.service.TicketReserveService;
 import com.capstone.inventoryservice.domain.service.TicketTypeService;
 import com.capstone.inventoryservice.exception.AppException;
@@ -9,7 +10,6 @@ import com.capstone.inventoryservice.exception.ErrorCode;
 import com.capstone.inventoryservice.model.entity.Event;
 import com.capstone.inventoryservice.model.entity.Showtime;
 import com.capstone.inventoryservice.model.entity.TicketType;
-import com.capstone.inventoryservice.model.repository.EventRepository;
 import com.capstone.inventoryservice.model.repository.TicketTypeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +25,7 @@ import java.util.List;
 public class InternalController {
     private final TicketTypeService ticketTypeService;
     private final TicketReserveService ticketReserveService;
-    private final EventRepository eventRepository;
+    private final ShowtimeCheckerService showtimeCheckerService;
     private final TicketTypeRepository ticketTypeRepository;
     private final IAMFeignClient iamFeignClient;
 
@@ -67,5 +67,14 @@ public class InternalController {
             @RequestBody List<Long> ticketTypeIds
     ) {
         return ResponseEntity.ok(BaseResponse.ok(ticketTypeService.getTicketDetailsInternal(ticketTypeIds)));
+    }
+
+    @GetMapping("/showtimes/{showtimeId}/checkers/{checkerId}/is-assigned")
+    public ResponseEntity<Boolean> isCheckerAssigned(
+            @PathVariable Long showtimeId,
+            @PathVariable Long checkerId
+    ) {
+        boolean isAssigned = showtimeCheckerService.isCheckerAssigned(showtimeId, checkerId);
+        return ResponseEntity.ok(isAssigned);
     }
 }

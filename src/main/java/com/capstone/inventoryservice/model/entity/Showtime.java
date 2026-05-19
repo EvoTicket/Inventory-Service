@@ -53,6 +53,10 @@ public class Showtime {
     @Builder.Default
     private Set<TicketType> ticketTypes = new HashSet<>();
 
+    @OneToMany(mappedBy = "showtime", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<ShowtimeChecker> checkers = new HashSet<>();
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

@@ -14,6 +14,7 @@ spring:
       service-name: inventory-service
       allowed-services:
         - order-service
+        - checkin-service
   ai:
     google:
       genai:
