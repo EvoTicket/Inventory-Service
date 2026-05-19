@@ -79,9 +79,6 @@ public class Event {
     @Column(name = "is_featured")
     private Boolean isFeatured;
 
-    @Column(name = "tag_line")
-    private String tagLine;
-
     @Column(name = "short_description")
     private String shortDescription;
 

@@ -275,7 +275,6 @@ public class EventService {
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
                 .seatMapImage("http://res.cloudinary.com/dtjmj7ayn/image/upload/v1776688153/event/2/seat_map/eedd19b3-9edc-49b9-87f7-6531e86eee2b.jpg")
-                .tagLine(request.getTagLine())
                 .shortDescription(request.getShortDescription())
                 .contactEmail(request.getContactEmail())
                 .contactPhone(request.getContactPhone())
@@ -430,9 +429,6 @@ public class EventService {
         }
         if (request.getBankInfoId() != null) {
             event.setBankInfoId(request.getBankInfoId());
-        }
-        if (request.getTagLine() != null) {
-            event.setTagLine(request.getTagLine());
         }
         if (request.getShortDescription() != null) {
             event.setShortDescription(request.getShortDescription());
@@ -601,7 +597,6 @@ public class EventService {
                 .category(event.getCategory())
                 .latitude(event.getLatitude())
                 .longitude(event.getLongitude())
-                .tagLine(event.getTagLine())
                 .shortDescription(event.getShortDescription())
                 .contactEmail(event.getContactEmail())
                 .contactPhone(event.getContactPhone())

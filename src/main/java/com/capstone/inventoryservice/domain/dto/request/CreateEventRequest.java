@@ -19,8 +19,6 @@ public class CreateEventRequest {
     @Size(max = 255, message = "Event name must not exceed 255 characters")
     private String eventName;
 
-    private String tagLine;
-
     @NotBlank(message = "Short description is required")
     @Size(max = 255, message = "Short description must not exceed 255 characters")
     private String shortDescription;

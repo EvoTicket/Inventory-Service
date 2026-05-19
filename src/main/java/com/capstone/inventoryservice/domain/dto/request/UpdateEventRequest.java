@@ -25,7 +25,6 @@ public class UpdateEventRequest {
     private BigDecimal latitude;
     private BigDecimal longitude;
     private Long bankInfoId;
-    private String tagLine;
     private String shortDescription;
     private String contactEmail;
     private String contactPhone;

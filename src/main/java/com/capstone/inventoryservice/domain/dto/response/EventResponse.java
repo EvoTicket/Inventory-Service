@@ -38,7 +38,6 @@ public class EventResponse {
     private EventCategory category;
     private BigDecimal latitude;
     private BigDecimal longitude;
-    private String tagLine;
     private String shortDescription;
     private String contactEmail;
     private String contactPhone;
