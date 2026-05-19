@@ -73,6 +73,9 @@ public class Event {
     @Column(name = "organizer_id")
     private Long organizerId;
 
+    @Column(name = "bank_info_id")
+    private Long bankInfoId;
+
     @Column(name = "is_featured")
     private Boolean isFeatured;
 

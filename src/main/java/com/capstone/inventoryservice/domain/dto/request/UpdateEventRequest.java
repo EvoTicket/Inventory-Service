@@ -24,6 +24,7 @@ public class UpdateEventRequest {
     private EventCategory category;
     private BigDecimal latitude;
     private BigDecimal longitude;
+    private Long bankInfoId;
 
     @Valid
     private List<UpdateShowtimeRequest> showtimes;

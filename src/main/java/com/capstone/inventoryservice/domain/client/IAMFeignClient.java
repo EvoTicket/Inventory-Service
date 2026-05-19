@@ -21,4 +21,7 @@ public interface IAMFeignClient {
 
     @GetMapping("/users/count-since")
     long getNewUsersCount(@RequestParam("since") String since);
+
+    @GetMapping("/bank-infos/{id}")
+    BankInfoInternalResponse getBankInfoById(@PathVariable("id") Long id);
 }

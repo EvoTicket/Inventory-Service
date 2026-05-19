@@ -1,6 +1,7 @@
 package com.capstone.inventoryservice.domain.dto.response;
 
 import com.capstone.inventoryservice.domain.client.OrgInternalResponse;
+import com.capstone.inventoryservice.domain.client.BankInfoInternalResponse;
 import com.capstone.inventoryservice.model.enums.EventApprovalStatus;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
@@ -31,6 +32,8 @@ public class EventResponse {
     private String seatMapImage;
     private Integer totalSeats;
     private Long organizerId;
+    private Long bankInfoId;
+    private BankInfoInternalResponse bankInfo;
     private Boolean isFeatured;
     private EventCategory category;
     private BigDecimal latitude;

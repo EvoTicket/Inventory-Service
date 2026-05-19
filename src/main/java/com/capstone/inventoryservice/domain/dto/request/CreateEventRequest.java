@@ -46,7 +46,8 @@ public class CreateEventRequest {
 
     private String introduction;
 
-    private Long checkers;
+    @NotNull(message = "Bank info is required")
+    private Long bankInfoId;
 
     @NotNull(message = "Category is required")
     private EventCategory category;

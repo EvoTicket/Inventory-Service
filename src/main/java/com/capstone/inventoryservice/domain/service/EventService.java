@@ -2,6 +2,7 @@ package com.capstone.inventoryservice.domain.service;
 
 import com.capstone.inventoryservice.domain.client.IAMFeignClient;
 import com.capstone.inventoryservice.domain.client.OrgInternalResponse;
+import com.capstone.inventoryservice.domain.client.BankInfoInternalResponse;
 import com.capstone.inventoryservice.domain.client.OrderFeignClient;
 import com.capstone.inventoryservice.domain.dto.BasePageResponse;
 import com.capstone.inventoryservice.domain.dto.event.TicketCreatedEvent;
@@ -264,8 +265,8 @@ public class EventService {
                 .eventType(request.getEventType())
                 .totalSeats(request.getTotalSeats())
                 .introduction(request.getIntroduction())
-                .checkers(request.getCheckers())
                 .organizerId(orgId)
+                .bankInfoId(request.getBankInfoId())
                 .isFeatured(request.getIsFeatured() != null && request.getIsFeatured())
                 .approvalStatus(EventApprovalStatus.PENDING)
                 .category(request.getCategory())
@@ -416,6 +417,9 @@ public class EventService {
         if (request.getLongitude() != null) {
             event.setLongitude(request.getLongitude());
         }
+        if (request.getBankInfoId() != null) {
+            event.setBankInfoId(request.getBankInfoId());
+        }
 
         Event updatedEvent = eventRepository.save(event);
         log.info("Updated event with ID: {}", eventId);
@@ -522,6 +526,15 @@ public class EventService {
         }
         OrgInternalResponse orgInternalResponse = iamFeignClient.getOrganizationById(event.getOrganizerId());
 
+        BankInfoInternalResponse bankInfo = null;
+        if (event.getBankInfoId() != null) {
+            try {
+                bankInfo = iamFeignClient.getBankInfoById(event.getBankInfoId());
+            } catch (Exception e) {
+                log.error("Could not fetch bank info for event: {}", event.getId(), e);
+            }
+        }
+
         return EventResponse.builder()
                 .eventId(event.getId())
                 .eventName(event.getEventName())
@@ -538,6 +551,8 @@ public class EventService {
                 .seatMapImage(event.getSeatMapImage())
                 .totalSeats(event.getTotalSeats())
                 .organizerId(event.getOrganizerId())
+                .bankInfoId(event.getBankInfoId())
+                .bankInfo(bankInfo)
                 .isFeatured(event.getIsFeatured())
                 .category(event.getCategory())
                 .latitude(event.getLatitude())
