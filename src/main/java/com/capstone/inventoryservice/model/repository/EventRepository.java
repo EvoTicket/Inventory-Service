@@ -84,5 +84,5 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
 
     void deleteByApprovalStatusAndCreatedAtBefore(EventApprovalStatus status, LocalDateTime dateTime);
 
-    List<Event> findByOrganizerIdAndApprovalStatusOrderByCreatedAtDesc(Long organizerId, EventApprovalStatus status);
+    long countByOrganizerIdAndApprovalStatus(Long organizerId, EventApprovalStatus status);
 }
