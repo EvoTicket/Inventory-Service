@@ -812,19 +812,15 @@ public class EventService {
     private record ScoredEvent(Event event, int score) { }
 
     @Transactional(readOnly = true)
-    public BasicEventInfoDto getCurrentDraftEvent() {
+    public CountDraftEventDto countCurrentDraftEvent() {
         Long orgId = Optional.ofNullable(jwtUtil.getDataFromAuth().organizationId())
                 .orElseThrow(() -> new AppException(ErrorCode.BAD_REQUEST, "Org id is null"));
 
-        return eventRepository
-                .findByOrganizerIdAndApprovalStatusOrderByCreatedAtDesc(
-                        orgId,
-                        EventApprovalStatus.DRAFT
-                )
-                .stream()
-                .findFirst()
-                .map(BasicEventInfoDto::convertToDTO)
-                .orElse(null);
+        long count = eventRepository.countByOrganizerIdAndApprovalStatus(orgId, EventApprovalStatus.DRAFT);
+
+        return CountDraftEventDto.builder()
+                .count(count)
+                .build();
     }
 
     @Transactional

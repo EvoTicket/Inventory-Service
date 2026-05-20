@@ -284,9 +284,9 @@ public class  EventController {
                 .body(BaseResponse.ok("Tạo bản nháp thành công", eventService.createDraftEvent()));
     }
 
-    @GetMapping("/current-draft")
-    public ResponseEntity<BaseResponse<BasicEventInfoDto>> getCurrentDraftEvent() {
-        return ResponseEntity.ok(BaseResponse.ok("Lấy bản nháp hiện tại thành công", eventService.getCurrentDraftEvent()));
+    @GetMapping("/count/current-draft")
+    public ResponseEntity<BaseResponse<CountDraftEventDto>> countCurrentDraftEvent() {
+        return ResponseEntity.ok(BaseResponse.ok("Lấy bản nháp hiện tại thành công", eventService.countCurrentDraftEvent()));
     }
 
     @PutMapping(value = "/{eventId}/draft/step-1", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
