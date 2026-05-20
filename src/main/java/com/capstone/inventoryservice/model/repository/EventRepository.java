@@ -3,6 +3,7 @@ package com.capstone.inventoryservice.model.repository;
 import com.capstone.inventoryservice.model.entity.Event;
 import com.capstone.inventoryservice.model.enums.EventApprovalStatus;
 
+import com.capstone.inventoryservice.model.enums.EventCategory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -69,7 +70,7 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     );
 
     @Query("SELECT e FROM Event e WHERE e.category = :category AND e.isCancelled = false AND e.approvalStatus = com.capstone.inventoryservice.model.enums.EventApprovalStatus.PUBLISHED")
-    Page<Event> findAcceptedByCategory(@Param("category") com.capstone.inventoryservice.model.enums.EventCategory category, Pageable pageable);
+    Page<Event> findAcceptedByCategory(@Param("category") EventCategory category, Pageable pageable);
 
     @Query("SELECT DISTINCT e FROM Event e " +
             "LEFT JOIN FETCH e.ward " +

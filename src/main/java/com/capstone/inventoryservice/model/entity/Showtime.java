@@ -76,6 +76,15 @@ public class Showtime {
 
     @Transient
     public String getFullAddress() {
-        return venue + ", " + address + ", " + Objects.requireNonNullElse(ward.getName(),"") + ", " + Objects.requireNonNullElse(province.getName(), "");
+        String wardName = ward != null ? ward.getName() : "";
+        String provinceName = province != null ? province.getName() : "";
+        
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        if (venue != null && !venue.isBlank()) parts.add(venue);
+        if (address != null && !address.isBlank()) parts.add(address);
+        if (!wardName.isEmpty()) parts.add(wardName);
+        if (!provinceName.isEmpty()) parts.add(provinceName);
+        
+        return String.join(", ", parts);
     }
 }

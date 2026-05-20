@@ -27,7 +27,7 @@ public class Event {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "event_name", nullable = false)
+    @Column(name = "event_name")
     private String eventName;
 
     @Column(name = "description", columnDefinition = "TEXT")
@@ -40,11 +40,11 @@ public class Event {
     private String address;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ward_code", referencedColumnName = "code",  nullable = false)
+    @JoinColumn(name = "ward_code", referencedColumnName = "code")
     private Ward ward;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "province_code", referencedColumnName = "code",  nullable = false)
+    @JoinColumn(name = "province_code", referencedColumnName = "code")
     private Province province;
 
     @Column(name = "is_cancelled")
@@ -192,7 +192,16 @@ public class Event {
 
     @Transient
     public String getFullAddress() {
-        return venue + ", " + address + ", " + Objects.requireNonNullElse(ward.getName(),"") + ", " + Objects.requireNonNullElse(province.getName(), "");
+        String wardName = ward != null ? ward.getName() : "";
+        String provinceName = province != null ? province.getName() : "";
+        
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        if (venue != null && !venue.isBlank()) parts.add(venue);
+        if (address != null && !address.isBlank()) parts.add(address);
+        if (!wardName.isEmpty()) parts.add(wardName);
+        if (!provinceName.isEmpty()) parts.add(provinceName);
+        
+        return String.join(", ", parts);
     }
 
     @Transient
