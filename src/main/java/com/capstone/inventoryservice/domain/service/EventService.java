@@ -1108,4 +1108,44 @@ public class EventService {
         }
         return convertToDTO(event);
     }
+
+    @Transactional
+    public Boolean deleteDraftEvents(List<Long> eventIds) {
+        Long orgId = jwtUtil.getDataFromAuth().organizationId();
+        if (orgId == null) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Org id is null");
+        }
+
+        List<Event> drafts = eventRepository.findAllById(eventIds);
+        for (Event event : drafts) {
+            if (!event.getOrganizerId().equals(orgId)) {
+                throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền xóa bản nháp này: " + event.getId());
+            }
+            if (event.getApprovalStatus() != EventApprovalStatus.DRAFT) {
+                throw new AppException(ErrorCode.BAD_REQUEST, "Sự kiện không còn ở trạng thái nháp: " + event.getId());
+            }
+        }
+
+        eventRepository.deleteAll(drafts);
+        return true;
+    }
+
+    @Transactional
+    public EventResponse cancelEvent(Long eventId) {
+        Event event = eventUtil.getEventOrElseThrow(eventId);
+        Long orgId = jwtUtil.getDataFromAuth().organizationId();
+        if (!event.getOrganizerId().equals(orgId)) {
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền hủy sự kiện này");
+        }
+
+        event.setIsCancelled(true);
+        if (event.getShowtimes() != null) {
+            for (Showtime showtime : event.getShowtimes()) {
+                showtime.setIsCancelled(true);
+            }
+        }
+
+        Event savedEvent = eventRepository.save(event);
+        return convertToDTO(savedEvent);
+    }
 }

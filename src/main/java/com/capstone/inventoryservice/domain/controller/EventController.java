@@ -368,4 +368,16 @@ public class  EventController {
         return ResponseEntity.ok(BaseResponse.ok("Lấy thông tin bản nháp thành công", eventService.getEventDraft(eventId)));
     }
 
+    @DeleteMapping("/drafts")
+    @Operation(summary = "Xóa danh sách các bản nháp sự kiện", description = "Xóa hàng loạt bản nháp sự kiện theo danh sách ID")
+    public ResponseEntity<BaseResponse<Boolean>> deleteDraftEvents(@RequestBody List<Long> draftIds) {
+        return ResponseEntity.ok(BaseResponse.ok("Xóa các bản nháp thành công", eventService.deleteDraftEvents(draftIds)));
+    }
+
+    @PostMapping("/{eventId}/cancel")
+    @Operation(summary = "Hủy sự kiện", description = "Hủy một sự kiện đang hoặc sắp diễn ra")
+    public ResponseEntity<BaseResponse<EventResponse>> cancelEvent(@PathVariable Long eventId) {
+        return ResponseEntity.ok(BaseResponse.ok("Hủy sự kiện thành công", eventService.cancelEvent(eventId)));
+    }
+
 }
