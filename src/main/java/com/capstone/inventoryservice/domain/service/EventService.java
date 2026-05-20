@@ -15,16 +15,7 @@ import com.capstone.inventoryservice.domain.dto.request.CreateDraftStep1Request;
 import com.capstone.inventoryservice.domain.dto.request.UpdateDraftStep2Request;
 import com.capstone.inventoryservice.domain.dto.request.UpdateDraftStep3Request;
 import com.capstone.inventoryservice.domain.dto.request.UpdateDraftStep4Request;
-import com.capstone.inventoryservice.domain.dto.response.EventResponse;
-import com.capstone.inventoryservice.domain.dto.response.HomepageResponse;
-import com.capstone.inventoryservice.domain.dto.response.HomepageSectionResponse;
-import com.capstone.inventoryservice.domain.dto.response.ListEventResponse;
-import com.capstone.inventoryservice.domain.dto.response.ReviewResponse;
-import com.capstone.inventoryservice.domain.dto.response.ShowtimeResponse;
-import com.capstone.inventoryservice.domain.dto.response.TicketTypeResponse;
-import com.capstone.inventoryservice.domain.dto.response.TrendingEventResponse;
-import com.capstone.inventoryservice.domain.dto.response.EventVolumeResponse;
-import com.capstone.inventoryservice.domain.dto.response.OrgEventDto;
+import com.capstone.inventoryservice.domain.dto.response.*;
 import com.capstone.inventoryservice.domain.mapper.ReviewMapper;
 import com.capstone.inventoryservice.model.entity.Event;
 import com.capstone.inventoryservice.model.entity.EventView;
@@ -820,8 +811,24 @@ public class EventService {
 
     private record ScoredEvent(Event event, int score) { }
 
+    @Transactional(readOnly = true)
+    public BasicEventInfoDto getCurrentDraftEvent() {
+        Long orgId = Optional.ofNullable(jwtUtil.getDataFromAuth().organizationId())
+                .orElseThrow(() -> new AppException(ErrorCode.BAD_REQUEST, "Org id is null"));
+
+        return eventRepository
+                .findByOrganizerIdAndApprovalStatusOrderByCreatedAtDesc(
+                        orgId,
+                        EventApprovalStatus.DRAFT
+                )
+                .stream()
+                .findFirst()
+                .map(BasicEventInfoDto::convertToDTO)
+                .orElse(null);
+    }
+
     @Transactional
-    public EventResponse createDraftEvent() {
+    public BasicEventInfoDto createDraftEvent() {
         Long orgId = jwtUtil.getDataFromAuth().organizationId();
         if(orgId == null) {
             throw new AppException(ErrorCode.BAD_REQUEST, "Org id is null");
@@ -837,7 +844,7 @@ public class EventService {
 
         Event savedEvent = eventRepository.save(event);
 
-        return convertToDTO(savedEvent);
+        return BasicEventInfoDto.convertToDTO(savedEvent);
     }
 
     @Transactional

@@ -3,11 +3,7 @@ package com.capstone.inventoryservice.domain.controller;
 import com.capstone.inventoryservice.domain.dto.BasePageResponse;
 import com.capstone.inventoryservice.domain.dto.BaseResponse;
 import com.capstone.inventoryservice.domain.dto.request.*;
-import com.capstone.inventoryservice.domain.dto.response.EventResponse;
-import com.capstone.inventoryservice.domain.dto.response.HomepageResponse;
-import com.capstone.inventoryservice.domain.dto.response.ListEventResponse;
-import com.capstone.inventoryservice.domain.dto.response.OrgEventDto;
-import com.capstone.inventoryservice.domain.dto.response.TrendingEventResponse;
+import com.capstone.inventoryservice.domain.dto.response.*;
 import com.capstone.inventoryservice.model.enums.EventApprovalStatus;
 import com.capstone.inventoryservice.model.enums.EventStatus;
 import com.capstone.inventoryservice.model.enums.EventType;
@@ -283,9 +279,14 @@ public class  EventController {
     }
 
     @PostMapping("/draft")
-    public ResponseEntity<BaseResponse<EventResponse>> createDraftEvent() {
+    public ResponseEntity<BaseResponse<BasicEventInfoDto>> createDraftEvent() {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(BaseResponse.ok("Tạo bản nháp thành công", eventService.createDraftEvent()));
+    }
+
+    @GetMapping("/current-draft")
+    public ResponseEntity<BaseResponse<BasicEventInfoDto>> getCurrentDraftEvent() {
+        return ResponseEntity.ok(BaseResponse.ok("Lấy bản nháp hiện tại thành công", eventService.getCurrentDraftEvent()));
     }
 
     @PutMapping(value = "/{eventId}/draft/step-1", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

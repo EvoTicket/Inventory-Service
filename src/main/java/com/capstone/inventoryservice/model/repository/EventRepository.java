@@ -81,35 +81,7 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
 
     Page<Event> findByOrganizerId(Long organizerId, Pageable pageable);
 
-    Optional<Event> findByOrganizerIdAndEventName(Long organizerId, String eventName);
-
-    @Query("SELECT e FROM Event e WHERE e.category = :category AND e.id NOT IN :excludeIds AND e.isCancelled = false AND e.approvalStatus = com.capstone.inventoryservice.model.enums.EventApprovalStatus.PUBLISHED AND e.id IN (SELECT s.event.id FROM Showtime s WHERE s.endDatetime > :now)")
-    Page<Event> findByCategoryExcludingIds(@Param("category") com.capstone.inventoryservice.model.enums.EventCategory category,
-                                            @Param("excludeIds") List<Long> excludeIds,
-                                            @Param("now") LocalDateTime now,
-                                            Pageable pageable);
-
-    @Query("SELECT e FROM Event e WHERE e.province.code = :provinceCode AND e.id NOT IN :excludeIds AND e.isCancelled = false AND e.approvalStatus = com.capstone.inventoryservice.model.enums.EventApprovalStatus.PUBLISHED AND e.id IN (SELECT s.event.id FROM Showtime s WHERE s.endDatetime > :now)")
-    Page<Event> findByProvinceExcludingIds(@Param("provinceCode") String provinceCode,
-                                            @Param("excludeIds") List<Long> excludeIds,
-                                            @Param("now") LocalDateTime now,
-                                            Pageable pageable);
-
-    @Query("SELECT e FROM Event e WHERE e.organizerId = :organizerId AND e.id NOT IN :excludeIds AND e.isCancelled = false AND e.approvalStatus = com.capstone.inventoryservice.model.enums.EventApprovalStatus.PUBLISHED AND e.id IN (SELECT s.event.id FROM Showtime s WHERE s.endDatetime > :now)")
-    Page<Event> findByOrganizerIdExcludingIds(@Param("organizerId") Long organizerId,
-                                               @Param("excludeIds") List<Long> excludeIds,
-                                               @Param("now") LocalDateTime now,
-                                               Pageable pageable);
-
-    @Query("SELECT e FROM Event e WHERE e.eventType = :eventType AND e.id NOT IN :excludeIds AND e.isCancelled = false AND e.approvalStatus = com.capstone.inventoryservice.model.enums.EventApprovalStatus.PUBLISHED AND e.id IN (SELECT s.event.id FROM Showtime s WHERE s.endDatetime > :now)")
-    Page<Event> findByEventTypeExcludingIds(@Param("eventType") com.capstone.inventoryservice.model.enums.EventType eventType,
-                                             @Param("excludeIds") List<Long> excludeIds,
-                                             @Param("now") LocalDateTime now,
-                                             Pageable pageable);
-
-    @Modifying
-    @Query("UPDATE Event e SET e.approvalStatus = :status WHERE e.approvalStatus IS NULL")
-    int backfillNullApprovalStatuses(@Param("status") EventApprovalStatus status);
-
     void deleteByApprovalStatusAndCreatedAtBefore(EventApprovalStatus status, LocalDateTime dateTime);
+
+    List<Event> findByOrganizerIdAndApprovalStatusOrderByCreatedAtDesc(Long organizerId, EventApprovalStatus status);
 }
