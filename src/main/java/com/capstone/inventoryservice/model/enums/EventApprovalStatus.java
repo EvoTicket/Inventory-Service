@@ -5,10 +5,12 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum  EventApprovalStatus {
-    PENDING(false),
-    ACCEPTED(true),
-    REJECTED(false);
+public enum EventApprovalStatus {
+    DRAFT(false),
+    PENDING_REVIEW(false),
+    PUBLISHED(true),
+    REJECTED(false),
+    CANCELLED(false);
 
     private final boolean accepted;
 }

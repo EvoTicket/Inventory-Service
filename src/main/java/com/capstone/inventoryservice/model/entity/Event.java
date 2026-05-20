@@ -121,7 +121,10 @@ public class Event {
     @Enumerated(EnumType.STRING)
     @Column(name = "approval_status", nullable = false)
     @Builder.Default
-    private EventApprovalStatus approvalStatus = EventApprovalStatus.PENDING;
+    private EventApprovalStatus approvalStatus = EventApprovalStatus.DRAFT;
+
+    @Column(name = "current_step")
+    private Long currentStep;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category")
@@ -166,7 +169,7 @@ public class Event {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
         if (approvalStatus == null) {
-            approvalStatus = EventApprovalStatus.PENDING;
+            approvalStatus = EventApprovalStatus.DRAFT;
         }
         if (isCancelled == null) {
             isCancelled = false;

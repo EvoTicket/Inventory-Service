@@ -25,6 +25,7 @@ public class EventResponse {
     private String address;
     private EventStatus eventStatus;
     private EventApprovalStatus approvalStatus;
+    private Long currentStep;
     private EventType eventType;
     private String bannerImage;
     private String thumbnailImage;

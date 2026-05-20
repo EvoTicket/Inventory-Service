@@ -43,6 +43,7 @@ public class OrgEventDto {
         // Status
         private EventStatus status;
         private EventApprovalStatus approvalStatus;
+        private Long currentStep;
 
         // Ticket info
         private Long soldTickets;
@@ -68,6 +69,7 @@ public class OrgEventDto {
                     .venue(event.getFullAddress())
                     .status(event.getEventStatus())
                     .approvalStatus(event.getApprovalStatus())
+                    .currentStep(event.getCurrentStep())
                     .soldTickets(event.getTotalQuantitySold() != null ? event.getTotalQuantitySold().longValue() : 0L)
                     .totalTickets(event.getTotalQuantityTotal() != null ? event.getTotalQuantityTotal().longValue() : 0L)
                     .revenue(revenue != null ? revenue : BigDecimal.ZERO)

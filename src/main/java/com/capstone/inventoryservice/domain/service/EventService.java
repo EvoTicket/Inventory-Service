@@ -11,6 +11,10 @@ import com.capstone.inventoryservice.domain.dto.request.CreateShowtimeRequest;
 import com.capstone.inventoryservice.domain.dto.request.CreateTicketTypeRequest;
 import com.capstone.inventoryservice.domain.dto.request.EventFilterRequest;
 import com.capstone.inventoryservice.domain.dto.request.UpdateEventRequest;
+import com.capstone.inventoryservice.domain.dto.request.CreateDraftStep1Request;
+import com.capstone.inventoryservice.domain.dto.request.UpdateDraftStep2Request;
+import com.capstone.inventoryservice.domain.dto.request.UpdateDraftStep3Request;
+import com.capstone.inventoryservice.domain.dto.request.UpdateDraftStep4Request;
 import com.capstone.inventoryservice.domain.dto.response.EventResponse;
 import com.capstone.inventoryservice.domain.dto.response.HomepageResponse;
 import com.capstone.inventoryservice.domain.dto.response.HomepageSectionResponse;
@@ -73,7 +77,7 @@ public class EventService {
 
     @Transactional(readOnly = true)
     public BasePageResponse<ListEventResponse> getEvents(EventFilterRequest filter) {
-        filter.setApprovalStatuses(List.of(EventApprovalStatus.ACCEPTED));
+        filter.setApprovalStatuses(List.of(EventApprovalStatus.PUBLISHED));
         Specification<Event> spec = EventSpecification.withFilters(filter);
         Pageable pageable = buildPageable(filter);
 
@@ -223,7 +227,7 @@ public class EventService {
     @Transactional
     public EventResponse getEventById(Long eventId) {
         Event event = eventUtil.getEventOrElseThrow(eventId);
-        if (event.getApprovalStatus() != EventApprovalStatus.ACCEPTED) {
+        if (event.getApprovalStatus() != EventApprovalStatus.PUBLISHED) {
             throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Event not found with id: " + eventId);
         }
         recordView(event);
@@ -250,7 +254,7 @@ public class EventService {
         eventViewRepository.save(view);
     }
 
-    public Boolean createEvent(CreateEventRequest request, MultipartFile bannerFile, MultipartFile thumbnailFile) {
+    public Boolean createEvent(CreateEventRequest request, MultipartFile bannerFile, MultipartFile thumbnailFile, MultipartFile seatMapFile) {
 
         Long orgId = jwtUtil.getDataFromAuth().organizationId();
         if(orgId == null) {
@@ -268,13 +272,14 @@ public class EventService {
                 .organizerId(orgId)
                 .bankInfoId(request.getBankInfoId())
                 .isFeatured(request.getIsFeatured() != null && request.getIsFeatured())
-                .approvalStatus(EventApprovalStatus.PENDING)
+                .approvalStatus(EventApprovalStatus.PENDING_REVIEW)
+                .currentStep(5L)
                 .category(request.getCategory())
                 .province(locationUtil.getProvinceByCode(request.getProvinceCode()))
                 .ward(locationUtil.getWardByCode(request.getWardCode()))
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
-                .seatMapImage("http://res.cloudinary.com/dtjmj7ayn/image/upload/v1776688153/event/2/seat_map/eedd19b3-9edc-49b9-87f7-6531e86eee2b.jpg")
+                .seatMapImage(null)
                 .shortDescription(request.getShortDescription())
                 .contactEmail(request.getContactEmail())
                 .contactPhone(request.getContactPhone())
@@ -352,6 +357,13 @@ public class EventService {
                 throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh thumbnail: " + e.getMessage());
             }
         }
+        if (seatMapFile != null && !seatMapFile.isEmpty()) {
+            try {
+                uploadTasks.add(uploadService.uploadImageAsync(savedEvent, seatMapFile.getBytes(), "seat_map"));
+            } catch (IOException e) {
+                throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh seat map: " + e.getMessage());
+            }
+        }
 
         CompletableFuture.allOf(uploadTasks.toArray(new CompletableFuture[0])).join();
 
@@ -373,7 +385,7 @@ public class EventService {
 
     @Transactional(readOnly = true)
     public BasePageResponse<ListEventResponse> getPendingEventsForAdmin(EventFilterRequest filter) {
-        filter.setApprovalStatuses(List.of(EventApprovalStatus.PENDING));
+        filter.setApprovalStatuses(List.of(EventApprovalStatus.PENDING_REVIEW));
         Specification<Event> spec = EventSpecification.withFilters(filter);
         Pageable pageable = buildPageable(filter);
         Page<Event> eventPage = eventRepository.findAll(spec, pageable);
@@ -382,8 +394,8 @@ public class EventService {
 
     @Transactional
     public EventResponse updateApprovalStatus(Long eventId, EventApprovalStatus approvalStatus) {
-        if (approvalStatus == null || approvalStatus == EventApprovalStatus.PENDING) {
-            throw new AppException(ErrorCode.BAD_REQUEST, "Approval status must be ACCEPTED or REJECTED");
+        if (approvalStatus == null || approvalStatus == EventApprovalStatus.PENDING_REVIEW) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Approval status must be PUBLISHED or REJECTED");
         }
 
         Event event = eventUtil.getEventOrElseThrow(eventId);
@@ -543,7 +555,7 @@ public class EventService {
         long totalEvents = eventRepository.count(EventSpecification.withFilters(EventFilterRequest.builder().organizerId(orgId).build()));
         long totalOnSales = eventRepository.count(EventSpecification.withFilters(EventFilterRequest.builder().organizerId(orgId).eventStatuses(List.of(EventStatus.ON_SALE)).build()));
         long totalCompleted = eventRepository.count(EventSpecification.withFilters(EventFilterRequest.builder().organizerId(orgId).eventStatuses(List.of(EventStatus.COMPLETED)).build()));
-        long totalPending = eventRepository.count(EventSpecification.withFilters(EventFilterRequest.builder().organizerId(orgId).approvalStatuses(List.of(EventApprovalStatus.PENDING)).build()));
+        long totalPending = eventRepository.count(EventSpecification.withFilters(EventFilterRequest.builder().organizerId(orgId).approvalStatuses(List.of(EventApprovalStatus.PENDING_REVIEW)).build()));
 
         return OrgEventDto.builder()
                 .totalEvents(totalEvents)
@@ -592,6 +604,7 @@ public class EventService {
                 .address(event.getFullAddress())
                 .eventStatus(event.getEventStatus())
                 .approvalStatus(event.getApprovalStatus())
+                .currentStep(event.getCurrentStep())
                 .eventType(event.getEventType())
                 .bannerImage(event.getBannerImage())
                 .thumbnailImage(event.getThumbnailImage())
@@ -742,7 +755,7 @@ public class EventService {
                 Specification.where(
                         EventSpecification.withFilters(
                                 EventFilterRequest.builder()
-                                        .approvalStatuses(List.of(EventApprovalStatus.ACCEPTED))
+                                        .approvalStatuses(List.of(EventApprovalStatus.PUBLISHED))
                                         .includeExpired(false)
                                         .ticketAvailabilityStatuses(List.of(TicketAvailabilityStatus.AVAILABLE))
                                         .build()
@@ -806,4 +819,323 @@ public class EventService {
     }
 
     private record ScoredEvent(Event event, int score) { }
+
+    @Transactional
+    public EventResponse createDraftStep1(CreateDraftStep1Request request, MultipartFile bannerFile, MultipartFile thumbnailFile) {
+        Long orgId = jwtUtil.getDataFromAuth().organizationId();
+        if(orgId == null) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Org id is null");
+        }
+
+        Event event = Event.builder()
+                .eventName(request.getEventName())
+                .introduction(request.getIntroduction())
+                .eventType(request.getEventType())
+                .category(request.getCategory())
+                .venue(request.getVenue())
+                .province(request.getProvinceCode() != null ? locationUtil.getProvinceByCode(request.getProvinceCode()) : null)
+                .ward(request.getWardCode() != null ? locationUtil.getWardByCode(request.getWardCode()) : null)
+                .address(request.getAddress())
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
+                .shortDescription(request.getShortDescription())
+                .description(request.getDescription())
+                .organizerId(orgId)
+                .approvalStatus(EventApprovalStatus.DRAFT)
+                .currentStep(1L)
+                .isFeatured(false)
+                .isCancelled(false)
+                .build();
+
+        Event savedEvent = eventRepository.save(event);
+
+        List<CompletableFuture<Void>> uploadTasks = new ArrayList<>();
+        if (bannerFile != null && !bannerFile.isEmpty()) {
+            try {
+                uploadTasks.add(uploadService.uploadImageAsync(savedEvent, bannerFile.getBytes(), "banner"));
+            } catch (IOException e) {
+                throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh banner: " + e.getMessage());
+            }
+        }
+        if (thumbnailFile != null && !thumbnailFile.isEmpty()) {
+            try {
+                uploadTasks.add(uploadService.uploadImageAsync(savedEvent, thumbnailFile.getBytes(), "thumbnail"));
+            } catch (IOException e) {
+                throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh thumbnail: " + e.getMessage());
+            }
+        }
+
+        if (!uploadTasks.isEmpty()) {
+            CompletableFuture.allOf(uploadTasks.toArray(new CompletableFuture[0])).join();
+            savedEvent = eventRepository.save(savedEvent);
+        }
+
+        return convertToDTO(savedEvent);
+    }
+
+    @Transactional
+    public EventResponse updateDraftStep1(Long eventId, CreateDraftStep1Request request, MultipartFile bannerFile, MultipartFile thumbnailFile) {
+        Event event = eventUtil.getEventOrElseThrow(eventId);
+        Long orgId = jwtUtil.getDataFromAuth().organizationId();
+        if (!event.getOrganizerId().equals(orgId)) {
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền sửa bản nháp này");
+        }
+        if (event.getApprovalStatus() != EventApprovalStatus.DRAFT) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Sự kiện không còn ở trạng thái nháp");
+        }
+
+        event.setEventName(request.getEventName());
+        event.setIntroduction(request.getIntroduction());
+        event.setEventType(request.getEventType());
+        event.setCategory(request.getCategory());
+        event.setVenue(request.getVenue());
+        event.setProvince(request.getProvinceCode() != null ? locationUtil.getProvinceByCode(request.getProvinceCode()) : null);
+        event.setWard(request.getWardCode() != null ? locationUtil.getWardByCode(request.getWardCode()) : null);
+        event.setAddress(request.getAddress());
+        event.setLatitude(request.getLatitude());
+        event.setLongitude(request.getLongitude());
+        event.setShortDescription(request.getShortDescription());
+        event.setDescription(request.getDescription());
+
+        if (event.getCurrentStep() == null || event.getCurrentStep() < 1L) {
+            event.setCurrentStep(1L);
+        }
+
+        Event savedEvent = eventRepository.save(event);
+
+        List<CompletableFuture<Void>> uploadTasks = new ArrayList<>();
+        if (bannerFile != null && !bannerFile.isEmpty()) {
+            try {
+                uploadTasks.add(uploadService.uploadImageAsync(savedEvent, bannerFile.getBytes(), "banner"));
+            } catch (IOException e) {
+                throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh banner: " + e.getMessage());
+            }
+        }
+        if (thumbnailFile != null && !thumbnailFile.isEmpty()) {
+            try {
+                uploadTasks.add(uploadService.uploadImageAsync(savedEvent, thumbnailFile.getBytes(), "thumbnail"));
+            } catch (IOException e) {
+                throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh thumbnail: " + e.getMessage());
+            }
+        }
+
+        if (!uploadTasks.isEmpty()) {
+            CompletableFuture.allOf(uploadTasks.toArray(new CompletableFuture[0])).join();
+            savedEvent = eventRepository.save(savedEvent);
+        }
+
+        return convertToDTO(savedEvent);
+    }
+
+    @Transactional
+    public EventResponse updateDraftStep2(Long eventId, UpdateDraftStep2Request request, MultipartFile seatMapFile) {
+        Event event = eventUtil.getEventOrElseThrow(eventId);
+        Long orgId = jwtUtil.getDataFromAuth().organizationId();
+        if (!event.getOrganizerId().equals(orgId)) {
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền sửa bản nháp này");
+        }
+        if (event.getApprovalStatus() != EventApprovalStatus.DRAFT) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Sự kiện không còn ở trạng thái nháp");
+        }
+
+        event.getShowtimes().clear();
+        event.setTotalSeats(request.getTotalSeats());
+
+        if (request.getShowtimes() != null && !request.getShowtimes().isEmpty()) {
+            for (CreateShowtimeRequest showtimeRequest : request.getShowtimes()) {
+                if (showtimeRequest.getEndDatetime().isBefore(showtimeRequest.getStartDatetime())) {
+                    throw new AppException(ErrorCode.BAD_REQUEST, "Giờ kết thúc của suất diễn phải sau giờ bắt đầu");
+                }
+
+                Showtime showtime = Showtime.builder()
+                        .event(event)
+                        .startDatetime(showtimeRequest.getStartDatetime())
+                        .endDatetime(showtimeRequest.getEndDatetime())
+                        .venue(showtimeRequest.getVenue())
+                        .address(showtimeRequest.getAddress())
+                        .ticketTypes(new java.util.HashSet<>())
+                        .build();
+
+                if (showtimeRequest.getWardCode() != null) {
+                    showtime.setWard(locationUtil.getWardByCode(showtimeRequest.getWardCode()));
+                }
+                if (showtimeRequest.getProvinceCode() != null) {
+                    showtime.setProvince(locationUtil.getProvinceByCode(showtimeRequest.getProvinceCode()));
+                }
+
+                if (showtimeRequest.getTicketTypes() != null && !showtimeRequest.getTicketTypes().isEmpty()) {
+                    for (CreateTicketTypeRequest ticketRequest : showtimeRequest.getTicketTypes()) {
+                        TicketType ticketType = TicketType.builder()
+                                .typeName(ticketRequest.getTypeName())
+                                .description(ticketRequest.getDescription())
+                                .price(ticketRequest.getPrice())
+                                .quantityTotal(ticketRequest.getQuantityTotal())
+                                .quantitySold(0)
+                                .minPurchase(ticketRequest.getMinPurchase())
+                                .maxPurchase(ticketRequest.getMaxPurchase())
+                                .saleStartDate(ticketRequest.getSaleStartDate())
+                                .saleEndDate(ticketRequest.getSaleEndDate())
+                                .ticketTypeStatus(TicketTypeStatus.AVAILABLE)
+                                .showtime(showtime)
+                                .build();
+
+                        showtime.getTicketTypes().add(ticketType);
+                    }
+                }
+
+                event.getShowtimes().add(showtime);
+            }
+        }
+
+        if (event.getCurrentStep() == null || event.getCurrentStep() < 2L) {
+            event.setCurrentStep(2L);
+        }
+
+        Event savedEvent = eventRepository.save(event);
+
+        if (seatMapFile != null && !seatMapFile.isEmpty()) {
+            try {
+                CompletableFuture<Void> uploadTask = uploadService.uploadImageAsync(savedEvent, seatMapFile.getBytes(), "seat_map");
+                uploadTask.join();
+                savedEvent = eventRepository.save(savedEvent);
+            } catch (IOException e) {
+                throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh sơ đồ ghế: " + e.getMessage());
+            }
+        }
+
+        return convertToDTO(savedEvent);
+    }
+
+    @Transactional
+    public EventResponse updateDraftStep3(Long eventId, UpdateDraftStep3Request request) {
+        Event event = eventUtil.getEventOrElseThrow(eventId);
+        Long orgId = jwtUtil.getDataFromAuth().organizationId();
+        if (!event.getOrganizerId().equals(orgId)) {
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền sửa bản nháp này");
+        }
+        if (event.getApprovalStatus() != EventApprovalStatus.DRAFT) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Sự kiện không còn ở trạng thái nháp");
+        }
+
+        event.setAllowMultipleTicketTypesPerOrder(request.getAllowMultipleTicketTypesPerOrder() != null && request.getAllowMultipleTicketTypesPerOrder());
+        event.setAllowDiscountCode(request.getAllowDiscountCode() != null && request.getAllowDiscountCode());
+        event.setAllowResale(request.getAllowResale() != null && request.getAllowResale());
+
+        if (event.getAllowResale()) {
+            if (request.getMaxResalePricePercentage() == null || request.getOrganizerRoyaltyFeePercentage() == null) {
+                throw new AppException(ErrorCode.BAD_REQUEST, "Khi cho phép bán lại, phần trăm giá bán lại tối đa và phí tác quyền của ban tổ chức không được để trống.");
+            }
+            event.setMaxResalePricePercentage(request.getMaxResalePricePercentage().divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP));
+            event.setOrganizerRoyaltyFeePercentage(request.getOrganizerRoyaltyFeePercentage().divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP));
+        } else {
+            if (request.getMaxResalePricePercentage() != null || request.getOrganizerRoyaltyFeePercentage() != null) {
+                throw new AppException(ErrorCode.BAD_REQUEST, "Khi không cho phép bán lại, phần trăm giá bán lại tối đa và phí tác quyền của ban tổ chức phải để trống.");
+            }
+            event.setMaxResalePricePercentage(null);
+            event.setOrganizerRoyaltyFeePercentage(null);
+        }
+
+        event.setPostPurchaseInstruction(request.getPostPurchaseInstruction());
+        event.setCheckInInstruction(request.getCheckInInstruction());
+        event.setEntryGateInstruction(request.getEntryGateInstruction());
+
+        if (event.getCurrentStep() == null || event.getCurrentStep() < 3L) {
+            event.setCurrentStep(3L);
+        }
+
+        Event savedEvent = eventRepository.save(event);
+        return convertToDTO(savedEvent);
+    }
+
+    @Transactional
+    public EventResponse updateDraftStep4(Long eventId, UpdateDraftStep4Request request) {
+        Event event = eventUtil.getEventOrElseThrow(eventId);
+        Long orgId = jwtUtil.getDataFromAuth().organizationId();
+        if (!event.getOrganizerId().equals(orgId)) {
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền sửa bản nháp này");
+        }
+        if (event.getApprovalStatus() != EventApprovalStatus.DRAFT) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Sự kiện không còn ở trạng thái nháp");
+        }
+
+        event.setBankInfoId(request.getBankInfoId());
+        event.setReconciliationNote(request.getReconciliationNote());
+
+        if (event.getCurrentStep() == null || event.getCurrentStep() < 4L) {
+            event.setCurrentStep(4L);
+        }
+
+        Event savedEvent = eventRepository.save(event);
+        return convertToDTO(savedEvent);
+    }
+
+    @Transactional
+    public EventResponse publishEvent(Long eventId) {
+        Event event = eventUtil.getEventOrElseThrow(eventId);
+        Long orgId = jwtUtil.getDataFromAuth().organizationId();
+        if (!event.getOrganizerId().equals(orgId)) {
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền xuất bản sự kiện này");
+        }
+        if (event.getApprovalStatus() != EventApprovalStatus.DRAFT) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Sự kiện không còn ở trạng thái nháp hoặc đã được xuất bản");
+        }
+
+        validateEventForPublish(event);
+
+        event.setApprovalStatus(EventApprovalStatus.PENDING_REVIEW);
+        event.setCurrentStep(5L);
+
+        Event savedEvent = eventRepository.save(event);
+        return convertToDTO(savedEvent);
+    }
+
+    private void validateEventForPublish(Event event) {
+        if (event.getEventName() == null || event.getEventName().isBlank()) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Tên sự kiện không được để trống");
+        }
+        if (event.getDescription() == null || event.getDescription().isBlank()) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Mô tả sự kiện không được để trống");
+        }
+        if (event.getVenue() == null || event.getVenue().isBlank()) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Địa điểm không được để trống");
+        }
+        if (event.getEventType() == null) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Loại sự kiện không được để trống");
+        }
+        if (event.getCategory() == null) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Thể loại sự kiện không được để trống");
+        }
+        if (event.getProvince() == null) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Tỉnh/Thành phố không được để trống");
+        }
+        if (event.getWard() == null) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Phường/Xã không được để trống");
+        }
+        if (event.getShowtimes() == null || event.getShowtimes().isEmpty()) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Sự kiện phải có ít nhất một suất diễn");
+        }
+        for (Showtime showtime : event.getShowtimes()) {
+            if (showtime.getTicketTypes() == null || showtime.getTicketTypes().isEmpty()) {
+                throw new AppException(ErrorCode.BAD_REQUEST, "Mỗi suất diễn phải có ít nhất một loại vé");
+            }
+        }
+        if (event.getAllowResale() != null && event.getAllowResale()) {
+            if (event.getMaxResalePricePercentage() == null || event.getOrganizerRoyaltyFeePercentage() == null) {
+                throw new AppException(ErrorCode.BAD_REQUEST, "Khi cho phép bán lại, phải điền đầy đủ phần trăm giá bán lại tối đa và phí tác quyền");
+            }
+        }
+        if (event.getBankInfoId() == null) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Thông tin tài khoản ngân hàng nhận tiền không được để trống");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public EventResponse getEventDraft(Long eventId) {
+        Event event = eventUtil.getEventOrElseThrow(eventId);
+        Long orgId = jwtUtil.getDataFromAuth().organizationId();
+        if (!event.getOrganizerId().equals(orgId)) {
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền truy cập sự kiện này");
+        }
+        return convertToDTO(event);
+    }
 }

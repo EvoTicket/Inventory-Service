@@ -2,9 +2,7 @@ package com.capstone.inventoryservice.domain.controller;
 
 import com.capstone.inventoryservice.domain.dto.BasePageResponse;
 import com.capstone.inventoryservice.domain.dto.BaseResponse;
-import com.capstone.inventoryservice.domain.dto.request.CreateEventRequest;
-import com.capstone.inventoryservice.domain.dto.request.EventFilterRequest;
-import com.capstone.inventoryservice.domain.dto.request.UpdateEventRequest;
+import com.capstone.inventoryservice.domain.dto.request.*;
 import com.capstone.inventoryservice.domain.dto.response.EventResponse;
 import com.capstone.inventoryservice.domain.dto.response.HomepageResponse;
 import com.capstone.inventoryservice.domain.dto.response.ListEventResponse;
@@ -259,10 +257,15 @@ public class  EventController {
             @RequestPart(value = "thumbnailImage", required = false)
             @Parameter(description = "Thumbnail image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
                     schema = @Schema(type = "string", format = "binary")))
-            MultipartFile thumbnailImage
+            MultipartFile thumbnailImage,
+
+            @RequestPart(value = "seatMapImage", required = false)
+            @Parameter(description = "Seat map image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    schema = @Schema(type = "string", format = "binary")))
+            MultipartFile seatMapImage
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(BaseResponse.ok("tạo event thành công" ,eventService.createEvent(request, bannerImage, thumbnailImage)));
+                .body(BaseResponse.ok("tạo event thành công" ,eventService.createEvent(request, bannerImage, thumbnailImage, seatMapImage)));
     }
 
     @PutMapping("/{eventId}")
@@ -279,5 +282,110 @@ public class  EventController {
                 .ok(BaseResponse.ok("success", eventService.deleteEvent(eventId)));
     }
 
+    @PostMapping(value = "/draft", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<BaseResponse<EventResponse>> createDraftStep1(
+            @Valid
+            @RequestPart("event")
+            @Parameter(
+                    description = "Event Step 1 JSON",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = CreateDraftStep1Request.class)
+                    )
+            )
+            CreateDraftStep1Request request,
+
+            @RequestPart(value = "bannerImage", required = false)
+            @Parameter(description = "Banner image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    schema = @Schema(type = "string", format = "binary")))
+            MultipartFile bannerImage,
+
+            @RequestPart(value = "thumbnailImage", required = false)
+            @Parameter(description = "Thumbnail image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    schema = @Schema(type = "string", format = "binary")))
+            MultipartFile thumbnailImage
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(BaseResponse.ok("Tạo bản nháp thành công", eventService.createDraftStep1(request, bannerImage, thumbnailImage)));
+    }
+
+    @PutMapping(value = "/{eventId}/draft/step-1", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<BaseResponse<EventResponse>> updateDraftStep1(
+            @PathVariable Long eventId,
+            @Valid
+            @RequestPart("event")
+            @Parameter(
+                    description = "Event Step 1 JSON",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = CreateDraftStep1Request.class)
+                    )
+            )
+            CreateDraftStep1Request request,
+
+            @RequestPart(value = "bannerImage", required = false)
+            @Parameter(description = "Banner image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    schema = @Schema(type = "string", format = "binary")))
+            MultipartFile bannerImage,
+
+            @RequestPart(value = "thumbnailImage", required = false)
+            @Parameter(description = "Thumbnail image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    schema = @Schema(type = "string", format = "binary")))
+            MultipartFile thumbnailImage
+    ) {
+        return ResponseEntity.ok(BaseResponse.ok("Cập nhật bước 1 thành công", eventService.updateDraftStep1(eventId, request, bannerImage, thumbnailImage)));
+    }
+
+    @PutMapping(value = "/{eventId}/draft/step-2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<BaseResponse<EventResponse>> updateDraftStep2(
+            @PathVariable Long eventId,
+            @Valid
+            @RequestPart("event")
+            @Parameter(
+                    description = "Event Step 2 JSON",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = UpdateDraftStep2Request.class)
+                    )
+            )
+            UpdateDraftStep2Request request,
+
+            @RequestPart(value = "seatMapImage", required = false)
+            @Parameter(description = "Seat map image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    schema = @Schema(type = "string", format = "binary")))
+            MultipartFile seatMapImage
+    ) {
+        return ResponseEntity.ok(BaseResponse.ok("Cập nhật bước 2 thành công", eventService.updateDraftStep2(eventId, request, seatMapImage)));
+    }
+
+    @PutMapping("/{eventId}/draft/step-3")
+    public ResponseEntity<BaseResponse<EventResponse>> updateDraftStep3(
+            @PathVariable Long eventId,
+            @Valid @RequestBody UpdateDraftStep3Request request
+    ) {
+        return ResponseEntity.ok(BaseResponse.ok("Cập nhật bước 3 thành công", eventService.updateDraftStep3(eventId, request)));
+    }
+
+    @PutMapping("/{eventId}/draft/step-4")
+    public ResponseEntity<BaseResponse<EventResponse>> updateDraftStep4(
+            @PathVariable Long eventId,
+            @Valid @RequestBody UpdateDraftStep4Request request
+    ) {
+        return ResponseEntity.ok(BaseResponse.ok("Cập nhật bước 4 thành công", eventService.updateDraftStep4(eventId, request)));
+    }
+
+    @PostMapping("/{eventId}/publish")
+    public ResponseEntity<BaseResponse<EventResponse>> publishEvent(
+            @PathVariable Long eventId
+    ) {
+        return ResponseEntity.ok(BaseResponse.ok("Xuất bản sự kiện thành công", eventService.publishEvent(eventId)));
+    }
+
+    @GetMapping("/{eventId}/draft")
+    public ResponseEntity<BaseResponse<EventResponse>> getEventDraft(
+            @PathVariable Long eventId
+    ) {
+        return ResponseEntity.ok(BaseResponse.ok("Lấy thông tin bản nháp thành công", eventService.getEventDraft(eventId)));
+    }
 
 }
