@@ -282,31 +282,10 @@ public class  EventController {
                 .ok(BaseResponse.ok("success", eventService.deleteEvent(eventId)));
     }
 
-    @PostMapping(value = "/draft", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<BaseResponse<EventResponse>> createDraftStep1(
-            @Valid
-            @RequestPart("event")
-            @Parameter(
-                    description = "Event Step 1 JSON",
-                    content = @Content(
-                            mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = CreateDraftStep1Request.class)
-                    )
-            )
-            CreateDraftStep1Request request,
-
-            @RequestPart(value = "bannerImage", required = false)
-            @Parameter(description = "Banner image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
-                    schema = @Schema(type = "string", format = "binary")))
-            MultipartFile bannerImage,
-
-            @RequestPart(value = "thumbnailImage", required = false)
-            @Parameter(description = "Thumbnail image", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
-                    schema = @Schema(type = "string", format = "binary")))
-            MultipartFile thumbnailImage
-    ) {
+    @PostMapping("/draft")
+    public ResponseEntity<BaseResponse<EventResponse>> createDraftEvent() {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(BaseResponse.ok("Tạo bản nháp thành công", eventService.createDraftStep1(request, bannerImage, thumbnailImage)));
+                .body(BaseResponse.ok("Tạo bản nháp thành công", eventService.createDraftEvent()));
     }
 
     @PutMapping(value = "/{eventId}/draft/step-1", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

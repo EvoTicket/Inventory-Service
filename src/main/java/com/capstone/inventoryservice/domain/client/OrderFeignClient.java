@@ -27,4 +27,10 @@ public interface OrderFeignClient {
 
     @GetMapping("/orders/platform-stats")
     PlatformStatsInternalResponse getPlatformStats(@RequestParam("days") int days);
+
+    @GetMapping("/orders/organizer-stats")
+    OrganizerOrdersStatsInternalResponse getOrganizerStats(
+            @RequestParam("eventIds") List<Long> eventIds,
+            @RequestParam("days") int days
+    );
 }

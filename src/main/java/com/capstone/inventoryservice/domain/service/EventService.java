@@ -821,25 +821,13 @@ public class EventService {
     private record ScoredEvent(Event event, int score) { }
 
     @Transactional
-    public EventResponse createDraftStep1(CreateDraftStep1Request request, MultipartFile bannerFile, MultipartFile thumbnailFile) {
+    public EventResponse createDraftEvent() {
         Long orgId = jwtUtil.getDataFromAuth().organizationId();
         if(orgId == null) {
             throw new AppException(ErrorCode.BAD_REQUEST, "Org id is null");
         }
 
         Event event = Event.builder()
-                .eventName(request.getEventName())
-                .introduction(request.getIntroduction())
-                .eventType(request.getEventType())
-                .category(request.getCategory())
-                .venue(request.getVenue())
-                .province(request.getProvinceCode() != null ? locationUtil.getProvinceByCode(request.getProvinceCode()) : null)
-                .ward(request.getWardCode() != null ? locationUtil.getWardByCode(request.getWardCode()) : null)
-                .address(request.getAddress())
-                .latitude(request.getLatitude())
-                .longitude(request.getLongitude())
-                .shortDescription(request.getShortDescription())
-                .description(request.getDescription())
                 .organizerId(orgId)
                 .approvalStatus(EventApprovalStatus.DRAFT)
                 .currentStep(1L)
@@ -848,27 +836,6 @@ public class EventService {
                 .build();
 
         Event savedEvent = eventRepository.save(event);
-
-        List<CompletableFuture<Void>> uploadTasks = new ArrayList<>();
-        if (bannerFile != null && !bannerFile.isEmpty()) {
-            try {
-                uploadTasks.add(uploadService.uploadImageAsync(savedEvent, bannerFile.getBytes(), "banner"));
-            } catch (IOException e) {
-                throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh banner: " + e.getMessage());
-            }
-        }
-        if (thumbnailFile != null && !thumbnailFile.isEmpty()) {
-            try {
-                uploadTasks.add(uploadService.uploadImageAsync(savedEvent, thumbnailFile.getBytes(), "thumbnail"));
-            } catch (IOException e) {
-                throw new AppException(ErrorCode.IO_EXCEPTION, "Không thể đọc ảnh thumbnail: " + e.getMessage());
-            }
-        }
-
-        if (!uploadTasks.isEmpty()) {
-            CompletableFuture.allOf(uploadTasks.toArray(new CompletableFuture[0])).join();
-            savedEvent = eventRepository.save(savedEvent);
-        }
 
         return convertToDTO(savedEvent);
     }

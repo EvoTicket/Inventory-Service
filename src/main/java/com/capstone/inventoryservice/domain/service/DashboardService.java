@@ -1,9 +1,8 @@
 package com.capstone.inventoryservice.domain.service;
 
-import com.capstone.inventoryservice.domain.client.IAMFeignClient;
-import com.capstone.inventoryservice.domain.client.OrderFeignClient;
-import com.capstone.inventoryservice.domain.client.PlatformStatsInternalResponse;
+import com.capstone.inventoryservice.domain.client.*;
 import com.capstone.inventoryservice.domain.dto.response.PlatformDashboardResponse;
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +21,7 @@ import com.capstone.inventoryservice.security.JwtUtil;
 import com.capstone.inventoryservice.model.entity.Event;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class DashboardService {
@@ -29,6 +29,7 @@ public class DashboardService {
     private final IAMFeignClient iamFeignClient;
     private final EventRepository eventRepository;
     private final JwtUtil jwtUtil;
+    private final CheckInFeignClient checkInFeignClient;
 
     public PlatformDashboardResponse getPlatformDashboard(int days) {
         PlatformStatsInternalResponse stats = orderFeignClient.getPlatformStats(days);
@@ -67,12 +68,47 @@ public class DashboardService {
                 }
             }
         } catch (Exception e) {
-            revenueMap = Collections.emptyMap();
+            log.error("Failed to fetch event revenues", e);
+        }
+
+        Map<Long, Long> resaleVolumeMap = Collections.emptyMap();
+        Map<Long, BigDecimal> royaltyFeeMap = Collections.emptyMap();
+        Map<String, BigDecimal> dailyRevenueMap = Collections.emptyMap();
+        try {
+            if (!eventIds.isEmpty()) {
+                OrganizerOrdersStatsInternalResponse orderStats = orderFeignClient.getOrganizerStats(eventIds, days);
+                if (orderStats != null) {
+                    if (orderStats.getResaleVolumeMap() != null) resaleVolumeMap = orderStats.getResaleVolumeMap();
+                    if (orderStats.getRoyaltyFeeMap() != null) royaltyFeeMap = orderStats.getRoyaltyFeeMap();
+                    if (orderStats.getDailyRevenueMap() != null) dailyRevenueMap = orderStats.getDailyRevenueMap();
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch organizer orders stats", e);
+        }
+
+        Map<Long, Long> checkedInMap = Collections.emptyMap();
+        Map<Long, Long> totalTicketsMap = Collections.emptyMap();
+        try {
+            if (!eventIds.isEmpty()) {
+                OrganizerCheckInStatsInternalResponse checkinStats = checkInFeignClient.getOrganizerStats(eventIds);
+                if (checkinStats != null) {
+                    if (checkinStats.getCheckedInMap() != null) checkedInMap = checkinStats.getCheckedInMap();
+                    if (checkinStats.getTotalTicketsMap() != null) totalTicketsMap = checkinStats.getTotalTicketsMap();
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch organizer check-in stats", e);
         }
 
         long totalSoldAll = 0;
         BigDecimal totalRevenueAll = BigDecimal.ZERO;
         long totalCapacityAll = 0;
+
+        long totalResaleVolumeAll = 0;
+        BigDecimal totalRoyaltyFeeAll = BigDecimal.ZERO;
+        long totalCheckedInAll = 0;
+        long totalAccessTicketsAll = 0;
 
         List<OrganizerDashboardResponse.EventPerformanceDto> performanceTable = new ArrayList<>();
         List<OrganizerDashboardResponse.TicketSalesByEventDto> ticketSalesByEvent = new ArrayList<>();
@@ -88,6 +124,22 @@ public class DashboardService {
             BigDecimal rev = revenueMap.getOrDefault(event.getId(), BigDecimal.ZERO);
             totalRevenueAll = totalRevenueAll.add(rev);
 
+            long eventResale = resaleVolumeMap.getOrDefault(event.getId(), 0L);
+            BigDecimal eventRoyalty = royaltyFeeMap.getOrDefault(event.getId(), BigDecimal.ZERO);
+            long eventCheckedIn = checkedInMap.getOrDefault(event.getId(), 0L);
+            long eventTotalTickets = totalTicketsMap.getOrDefault(event.getId(), 0L);
+
+            totalResaleVolumeAll += eventResale;
+            totalRoyaltyFeeAll = totalRoyaltyFeeAll.add(eventRoyalty);
+            totalCheckedInAll += eventCheckedIn;
+            totalAccessTicketsAll += eventTotalTickets;
+
+            String checkinStr = "-";
+            if (eventTotalTickets > 0) {
+                double rate = (double) eventCheckedIn * 100 / eventTotalTickets;
+                checkinStr = String.format("%,d / %,d (%.1f%%)", eventCheckedIn, eventTotalTickets, rate);
+            }
+
             ticketSalesByEvent.add(OrganizerDashboardResponse.TicketSalesByEventDto.builder()
                     .name(event.getEventName())
                     .tickets(sold)
@@ -99,9 +151,9 @@ public class DashboardService {
                     .sold(String.format("%,d", sold))
                     .occupancy(occ + "%")
                     .revenue(formatCurrency(rev))
-                    .checkin("-")
-                    .resale("-")
-                    .royalty("-")
+                    .checkin(checkinStr)
+                    .resale(String.format("%,d", eventResale))
+                    .royalty(formatCurrency(eventRoyalty))
                     .status(event.getEventStatus() != null ? event.getEventStatus().name() : "UNKNOWN")
                     .build());
         }
@@ -109,21 +161,34 @@ public class DashboardService {
         List<OrganizerDashboardResponse.OccupancyByCategoryDto> occupancyByCategory = buildOccupancyByCategory(events);
         
         double avgOcc = totalCapacityAll > 0 ? (double) totalSoldAll * 100 / totalCapacityAll : 0.0;
+        double avgCheckIn = totalAccessTicketsAll > 0 ? (double) totalCheckedInAll * 100 / totalAccessTicketsAll : 0.0;
+        double absentRate = totalAccessTicketsAll > 0 ? (double) (totalAccessTicketsAll - totalCheckedInAll) * 100 / totalAccessTicketsAll : 0.0;
+
+        List<OrganizerDashboardResponse.DailyRevenueDto> revenueTrend = new ArrayList<>();
+        List<String> sortedDates = new ArrayList<>(dailyRevenueMap.keySet());
+        Collections.sort(sortedDates);
+        int dayIndex = 1;
+        for (String dateStr : sortedDates) {
+            revenueTrend.add(OrganizerDashboardResponse.DailyRevenueDto.builder()
+                    .day(dayIndex++)
+                    .revenue(dailyRevenueMap.get(dateStr))
+                    .build());
+        }
 
         return OrganizerDashboardResponse.builder()
                 .totalRevenue(totalRevenueAll)
                 .totalTicketsSold(totalSoldAll)
                 .avgOccupancyRate(Math.round(avgOcc * 10.0) / 10.0)
-                .avgCheckInRate(0.0)
-                .resaleVolume(0)
-                .royaltyFee(BigDecimal.ZERO)
-                .revenueTrend(java.util.Collections.emptyList())
+                .avgCheckInRate(Math.round(avgCheckIn * 10.0) / 10.0)
+                .resaleVolume(totalResaleVolumeAll)
+                .royaltyFee(totalRoyaltyFeeAll)
+                .revenueTrend(revenueTrend)
                 .occupancyByCategory(occupancyByCategory)
                 .ticketSalesByEvent(ticketSalesByEvent)
                 .checkInStatus(OrganizerDashboardResponse.CheckInStatusDto.builder()
-                        .checkedIn(0)
-                        .notCheckedIn(0)
-                        .absentRate(0.0)
+                        .checkedIn(totalCheckedInAll)
+                        .notCheckedIn(Math.max(0, totalAccessTicketsAll - totalCheckedInAll))
+                        .absentRate(Math.round(absentRate * 10.0) / 10.0)
                         .peakGateTime(null)
                         .build())
                 .performanceTable(performanceTable)
