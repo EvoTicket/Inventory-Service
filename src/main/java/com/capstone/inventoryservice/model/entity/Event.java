@@ -100,6 +100,12 @@ public class Event {
     @Builder.Default
     private Boolean allowResale = false;
 
+    @Column(name = "max_resale_price_percentage", precision = 5, scale = 4)
+    private BigDecimal maxResalePricePercentage;
+
+    @Column(name = "organizer_royalty_fee_percentage", precision = 5, scale = 4)
+    private BigDecimal organizerRoyaltyFeePercentage;
+
     @Column(name = "post_purchase_instruction", columnDefinition = "TEXT")
     private String postPurchaseInstruction;
 

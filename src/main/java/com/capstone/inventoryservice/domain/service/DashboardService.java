@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.stream.Collectors;
 import java.util.List;
 import java.util.ArrayList;
@@ -56,17 +57,17 @@ public class DashboardService {
         Long orgId = jwtUtil.getDataFromAuth().organizationId();
         List<Event> events = eventRepository.findByOrganizerId(orgId);
 
-        List<Long> eventIds = events.stream().map(Event::getId).collect(Collectors.toList());
-        Map<Long, BigDecimal> revenueMap = java.util.Collections.emptyMap();
+        List<Long> eventIds = events.stream().map(Event::getId).toList();
+        Map<Long, BigDecimal> revenueMap = Collections.emptyMap();
         try {
             if (!eventIds.isEmpty()) {
                 revenueMap = orderFeignClient.getRevenueForEvents(eventIds);
                 if (revenueMap == null) {
-                    revenueMap = java.util.Collections.emptyMap();
+                    revenueMap = Collections.emptyMap();
                 }
             }
         } catch (Exception e) {
-            revenueMap = java.util.Collections.emptyMap();
+            revenueMap = Collections.emptyMap();
         }
 
         long totalSoldAll = 0;

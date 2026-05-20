@@ -39,6 +39,10 @@ public class CreateEventRequest {
     @Builder.Default
     private Boolean allowResale = false;
 
+    private BigDecimal maxResalePricePercentage;
+
+    private BigDecimal organizerRoyaltyFeePercentage;
+
     private String postPurchaseInstruction;
 
     private String checkInInstruction;

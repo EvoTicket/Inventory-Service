@@ -31,6 +31,8 @@ public class UpdateEventRequest {
     private Boolean allowMultipleTicketTypesPerOrder;
     private Boolean allowDiscountCode;
     private Boolean allowResale;
+    private BigDecimal maxResalePricePercentage;
+    private BigDecimal organizerRoyaltyFeePercentage;
     private String postPurchaseInstruction;
     private String checkInInstruction;
     private String entryGateInstruction;

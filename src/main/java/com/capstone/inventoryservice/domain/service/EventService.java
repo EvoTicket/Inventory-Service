@@ -281,6 +281,8 @@ public class EventService {
                 .allowMultipleTicketTypesPerOrder(request.getAllowMultipleTicketTypesPerOrder() != null && request.getAllowMultipleTicketTypesPerOrder())
                 .allowDiscountCode(request.getAllowDiscountCode() != null && request.getAllowDiscountCode())
                 .allowResale(request.getAllowResale() != null && request.getAllowResale())
+                .maxResalePricePercentage(request.getMaxResalePricePercentage() != null ? request.getMaxResalePricePercentage().divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP) : null)
+                .organizerRoyaltyFeePercentage(request.getOrganizerRoyaltyFeePercentage() != null ? request.getOrganizerRoyaltyFeePercentage().divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP) : null)
                 .postPurchaseInstruction(request.getPostPurchaseInstruction())
                 .checkInInstruction(request.getCheckInInstruction())
                 .entryGateInstruction(request.getEntryGateInstruction())
@@ -448,6 +450,12 @@ public class EventService {
         if (request.getAllowResale() != null) {
             event.setAllowResale(request.getAllowResale());
         }
+        if (request.getMaxResalePricePercentage() != null) {
+            event.setMaxResalePricePercentage(request.getMaxResalePricePercentage().divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP));
+        }
+        if (request.getOrganizerRoyaltyFeePercentage() != null) {
+            event.setOrganizerRoyaltyFeePercentage(request.getOrganizerRoyaltyFeePercentage().divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP));
+        }
         if (request.getPostPurchaseInstruction() != null) {
             event.setPostPurchaseInstruction(request.getPostPurchaseInstruction());
         }
@@ -603,6 +611,8 @@ public class EventService {
                 .allowMultipleTicketTypesPerOrder(event.getAllowMultipleTicketTypesPerOrder())
                 .allowDiscountCode(event.getAllowDiscountCode())
                 .allowResale(event.getAllowResale())
+                .maxResalePricePercentage(event.getMaxResalePricePercentage() != null ? event.getMaxResalePricePercentage().multiply(BigDecimal.valueOf(100)) : null)
+                .organizerRoyaltyFeePercentage(event.getOrganizerRoyaltyFeePercentage() != null ? event.getOrganizerRoyaltyFeePercentage().multiply(BigDecimal.valueOf(100)) : null)
                 .postPurchaseInstruction(event.getPostPurchaseInstruction())
                 .checkInInstruction(event.getCheckInInstruction())
                 .entryGateInstruction(event.getEntryGateInstruction())

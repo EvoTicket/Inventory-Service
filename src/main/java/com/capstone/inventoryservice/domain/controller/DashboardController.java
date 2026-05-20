@@ -1,6 +1,7 @@
 package com.capstone.inventoryservice.domain.controller;
 
 import com.capstone.inventoryservice.domain.dto.BaseResponse;
+import com.capstone.inventoryservice.domain.dto.response.OrganizerDashboardResponse;
 import com.capstone.inventoryservice.domain.dto.response.PlatformDashboardResponse;
 import com.capstone.inventoryservice.domain.service.DashboardService;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +25,9 @@ public class DashboardController {
     }
 
     @GetMapping("/organizer")
-    public ResponseEntity<BaseResponse<com.capstone.inventoryservice.domain.dto.response.OrganizerDashboardResponse>> getOrganizerDashboard(
+    public ResponseEntity<BaseResponse<OrganizerDashboardResponse>> getOrganizerDashboard(
             @RequestParam(defaultValue = "30") int days) {
-        com.capstone.inventoryservice.domain.dto.response.OrganizerDashboardResponse response = dashboardService
-                .getOrganizerDashboard(days);
+        OrganizerDashboardResponse response = dashboardService.getOrganizerDashboard(days);
         return ResponseEntity.ok(BaseResponse.ok("Lấy dữ liệu dashboard organizer thành công", response));
     }
 

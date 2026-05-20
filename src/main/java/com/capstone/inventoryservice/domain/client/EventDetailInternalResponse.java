@@ -4,6 +4,7 @@ import com.capstone.inventoryservice.model.entity.Event;
 import com.capstone.inventoryservice.model.entity.Showtime;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -21,6 +22,8 @@ public class EventDetailInternalResponse {
     String category;
     Integer provinceCode;
     ShowtimeDetail showtime;
+    BigDecimal maxResalePricePercentage;
+    BigDecimal organizerRoyaltyFeePercentage;
 
     @Getter
     @Setter
@@ -60,6 +63,8 @@ public class EventDetailInternalResponse {
                 .category(event.getCategory() != null ? event.getCategory().name() : null)
                 .provinceCode(event.getProvince() != null ? event.getProvince().getCode() : null)
                 .showtime(ShowtimeDetail.from(showtime))
+                .maxResalePricePercentage(event.getMaxResalePricePercentage())
+                .organizerRoyaltyFeePercentage(event.getOrganizerRoyaltyFeePercentage())
                 .build();
     }
 }
