@@ -90,9 +90,9 @@ public class InternalController {
     }
 
     @GetMapping("/bank/bin-code")
-    public ResponseEntity<String> getBinCodeFromBankCode(@RequestParam String bankCode) {
+    public ResponseEntity<BinCodeDto> getBinCodeFromBankCode(@RequestParam String bankCode) {
         Bank bank = bankRepository.findByCode(bankCode)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Bank not found with code: " + bankCode));
-        return ResponseEntity.ok(bank.getBin());
+        return ResponseEntity.ok(new BinCodeDto(bank.getBin()));
     }
 }
