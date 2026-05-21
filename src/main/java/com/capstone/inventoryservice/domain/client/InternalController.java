@@ -8,9 +8,11 @@ import com.capstone.inventoryservice.domain.service.TicketTypeService;
 import com.capstone.inventoryservice.domain.util.EventUtil;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
+import com.capstone.inventoryservice.model.entity.Bank;
 import com.capstone.inventoryservice.model.entity.Event;
 import com.capstone.inventoryservice.model.entity.Showtime;
 import com.capstone.inventoryservice.model.entity.TicketType;
+import com.capstone.inventoryservice.model.repository.BankRepository;
 import com.capstone.inventoryservice.model.repository.TicketTypeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +32,7 @@ public class InternalController {
     private final EventUtil eventUtil;
     private final TicketTypeRepository ticketTypeRepository;
     private final IAMFeignClient iamFeignClient;
+    private final BankRepository bankRepository;
 
     @PostMapping("/ticket-types/tickets")
     public ResponseEntity<BaseResponse<ListTicketTypesInternalResponse>> getTicketTypes(
@@ -84,5 +87,12 @@ public class InternalController {
     public ResponseEntity<Boolean> getAllowReservation(@PathVariable Long eventId) {
         boolean isAllowReservation = eventUtil.getEventOrElseThrow(eventId).getAllowResale();
         return ResponseEntity.ok(isAllowReservation);
+    }
+
+    @GetMapping("/bank/bin-code")
+    public ResponseEntity<String> getBinCodeFromBankCode(@RequestParam String bankCode) {
+        Bank bank = bankRepository.findByCode(bankCode)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Bank not found with code: " + bankCode));
+        return ResponseEntity.ok(bank.getBin());
     }
 }
