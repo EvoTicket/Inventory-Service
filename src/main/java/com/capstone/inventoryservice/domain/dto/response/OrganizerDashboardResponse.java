@@ -25,7 +25,7 @@ public class OrganizerDashboardResponse {
     @Data
     @Builder
     public static class DailyRevenueDto {
-        private int day;
+        private String date;
         private BigDecimal revenue;
     }
 
