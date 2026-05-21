@@ -16,6 +16,8 @@ public class ShowtimeResponse {
     private String venue;
     private String address;
     private String fullAddress;
+    private Integer wardCode;
+    private Integer provinceCode;
     private String provinceName;
     private Boolean isCancelled;
     private List<TicketTypeResponse> ticketTypes;

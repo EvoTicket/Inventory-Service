@@ -23,6 +23,9 @@ public class EventResponse {
     private String description;
     private String venue;
     private String address;
+    private String detailAddress;
+    private Integer wardCode;
+    private Integer provinceCode;
     private EventStatus eventStatus;
     private EventApprovalStatus approvalStatus;
     private Long currentStep;
