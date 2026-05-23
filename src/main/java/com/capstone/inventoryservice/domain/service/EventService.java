@@ -838,7 +838,7 @@ public class EventService {
         Event event = Event.builder()
                 .organizerId(orgId)
                 .approvalStatus(EventApprovalStatus.DRAFT)
-                .currentStep(1L)
+                .currentStep(0L)
                 .isFeatured(false)
                 .isCancelled(false)
                 .build();
