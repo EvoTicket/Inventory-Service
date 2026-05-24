@@ -15,6 +15,9 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.capstone.inventoryservice.domain.service.EventService;
+import com.capstone.inventoryservice.domain.dto.BasePageResponse;
+import com.capstone.inventoryservice.domain.dto.response.TrendingEventResponse;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -44,6 +47,7 @@ public class EvoTicketTools {
     private final UserFavoriteEventRepository userFavoriteEventRepository;
     private final SqlGeneratorService sqlGeneratorService;
     private final SqlExecutorService sqlExecutorService;
+    private final EventService eventService;
 
     // =========================================================
     // Tool: Text-to-SQL
@@ -344,11 +348,13 @@ public class EvoTicketTools {
         int actualLimit = (limit == null || limit <= 0) ? 5 : limit;
         log.info("[Tool] getTrendingEvents called with limit={}", actualLimit);
 
-        Page<Event> trending = eventRepository.findTrendingEvents(LocalDateTime.now(), PageRequest.of(0, actualLimit));
-        if (trending.isEmpty()) return "Hiện chưa có thống kê sự kiện hot.";
+        BasePageResponse<TrendingEventResponse> trendingResponse = eventService.getTrendingEvents(actualLimit);
+        if (trendingResponse == null || trendingResponse.getContent() == null || trendingResponse.getContent().isEmpty()) {
+            return "Hiện chưa có thống kê sự kiện hot.";
+        }
 
         StringBuilder sb = new StringBuilder("=== SỰ KIỆN HOT NHẤT ===\n");
-        trending.forEach(e -> sb.append(formatEventSummary(e)));
+        trendingResponse.getContent().forEach(t -> sb.append(formatTrendingEvent(t)));
         return sb.toString();
     }
 
@@ -402,6 +408,24 @@ public class EvoTicketTools {
                 e.getEventName(),
                 start != null ? start.format(FORMATTER) : "N/A",
                 e.getEventStatus());
+    }
+
+    private String formatTrendingEvent(TrendingEventResponse t) {
+        String ticketStatus = "N/A";
+        if (t.getTicketAvailabilityStatus() != null) {
+            ticketStatus = switch (t.getTicketAvailabilityStatus()) {
+                case AVAILABLE -> "Còn vé";
+                case ALMOST_SOLD_OUT -> "Sắp cháy vé";
+                case SOLD_OUT -> "Hết vé";
+            };
+        }
+        return String.format("• [ID:%d] %s | BTC: %s | Giá từ: %s VND | Độ hot: %.1f | Vé: %s\n",
+                t.getId(),
+                t.getEventName(),
+                t.getOrganizerName() != null ? t.getOrganizerName() : "N/A",
+                t.getFloorPrice() != null ? t.getFloorPrice().toString() : "N/A",
+                t.getHotness() != null ? t.getHotness() : 0.0,
+                ticketStatus);
     }
 
     private String formatEventDetail(Event e) {
