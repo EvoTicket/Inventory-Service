@@ -40,6 +40,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -78,6 +81,7 @@ public class EventService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "homepageEvents", key = "'default'")
     public HomepageResponse getHomepageEvents() {
         Pageable pageable = PageRequest.of(0, 4);
         LocalDateTime now = LocalDateTime.now();
@@ -124,12 +128,23 @@ public class EventService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
-    public BasePageResponse<TrendingEventResponse> getTrendingEvents(int limit) {
-        Pageable pageable = PageRequest.of(0, limit);
-        Page<Event> eventPage = eventRepository.findTrendingEvents(LocalDateTime.now(), pageable);
+    private static final double ALPHA = 3.0;
+    private static final double BETA = 10.0;
+    private static final double GROWTH_CAP = 3.0;
+    private static final double BUY_WEIGHT = 0.65;
+    private static final double HOT_WEIGHT = 0.35;
 
-        List<Long> eventIds = eventPage.getContent().stream()
+    @Transactional(readOnly = true)
+    @Cacheable(value = "trendingEvents", key = "#limit")
+    public BasePageResponse<TrendingEventResponse> getTrendingEvents(int limit) {
+        LocalDateTime now = LocalDateTime.now();
+        List<Event> candidateEvents = eventRepository.findCandidateEvents(now);
+
+        if (candidateEvents.isEmpty()) {
+            return BasePageResponse.fromPage(Page.empty());
+        }
+
+        List<Long> eventIds = candidateEvents.stream()
                 .map(Event::getId)
                 .toList();
 
@@ -143,7 +158,91 @@ public class EventService {
 
         final Map<Long, EventVolumeResponse> finalVolumeMap = volumeMap;
 
-        Page<TrendingEventResponse> dtoPage = eventPage.map(event -> {
+        // Step 5: Compute buyPowerRaw for each candidate and find min/max
+        Map<Long, Double> buyPowerRawMap = new HashMap<>();
+        double minBuyPowerRaw = Double.MAX_VALUE;
+        double maxBuyPowerRaw = -Double.MAX_VALUE;
+
+        for (Event event : candidateEvents) {
+            EventVolumeResponse volumeData = finalVolumeMap.get(event.getId());
+            double revenueToday = 0.0;
+            if (volumeData != null && volumeData.getRevenueToday() != null) {
+                revenueToday = volumeData.getRevenueToday().doubleValue();
+            }
+            double buyPowerRaw = Math.log1p(revenueToday);
+            buyPowerRawMap.put(event.getId(), buyPowerRaw);
+            if (buyPowerRaw < minBuyPowerRaw) {
+                minBuyPowerRaw = buyPowerRaw;
+            }
+            if (buyPowerRaw > maxBuyPowerRaw) {
+                maxBuyPowerRaw = buyPowerRaw;
+            }
+        }
+
+        // Step 12 & 13: Compute trending score for each event
+        Map<Long, Double> trendingScoreMap = new HashMap<>();
+        for (Event event : candidateEvents) {
+            double buyPowerRaw = buyPowerRawMap.get(event.getId());
+            double buyPowerScore = 0.5;
+            if (maxBuyPowerRaw > minBuyPowerRaw) {
+                buyPowerScore = (buyPowerRaw - minBuyPowerRaw) / (maxBuyPowerRaw - minBuyPowerRaw);
+            }
+
+            EventVolumeResponse volumeData = finalVolumeMap.get(event.getId());
+            long ticketsToday = 0;
+            long ticketsYesterday = 0;
+            if (volumeData != null) {
+                if (volumeData.getTicketsToday() != null) {
+                    ticketsToday = volumeData.getTicketsToday();
+                }
+                if (volumeData.getTicketsYesterday() != null) {
+                    ticketsYesterday = volumeData.getTicketsYesterday();
+                }
+            }
+
+            double smoothedGrowth = (double) (ticketsToday + ALPHA) / (ticketsYesterday + ALPHA) - 1.0;
+            double cappedGrowth = Math.max(0.0, Math.min(GROWTH_CAP, smoothedGrowth));
+            double hotScoreBase = cappedGrowth / GROWTH_CAP;
+            double confidence = (double) ticketsToday / (ticketsToday + BETA);
+            double hotScore = hotScoreBase * confidence;
+
+            double trendingScore = 100.0 * (BUY_WEIGHT * buyPowerScore + HOT_WEIGHT * hotScore);
+            trendingScoreMap.put(event.getId(), trendingScore);
+        }
+
+        // Step 14: Sort candidateEvents
+        // Sort theo trendingScore DESC. Nếu bằng nhau: revenueToday DESC, sau đó ticketsToday DESC, sau đó eventStartTime ASC.
+        List<Event> sortedEvents = new ArrayList<>(candidateEvents);
+        sortedEvents.sort((e1, e2) -> {
+            double score1 = trendingScoreMap.get(e1.getId());
+            double score2 = trendingScoreMap.get(e2.getId());
+            int cmp = Double.compare(score2, score1); // DESC
+            if (cmp != 0) return cmp;
+
+            EventVolumeResponse v1 = finalVolumeMap.get(e1.getId());
+            EventVolumeResponse v2 = finalVolumeMap.get(e2.getId());
+            double rev1 = (v1 != null && v1.getRevenueToday() != null) ? v1.getRevenueToday().doubleValue() : 0.0;
+            double rev2 = (v2 != null && v2.getRevenueToday() != null) ? v2.getRevenueToday().doubleValue() : 0.0;
+            cmp = Double.compare(rev2, rev1); // DESC
+            if (cmp != 0) return cmp;
+
+            long tToday1 = (v1 != null && v1.getTicketsToday() != null) ? v1.getTicketsToday() : 0L;
+            long tToday2 = (v2 != null && v2.getTicketsToday() != null) ? v2.getTicketsToday() : 0L;
+            cmp = Long.compare(tToday2, tToday1); // DESC
+            if (cmp != 0) return cmp;
+
+            LocalDateTime t1 = e1.getEarliestStart();
+            LocalDateTime t2 = e2.getEarliestStart();
+            if (t1 == null && t2 == null) return 0;
+            if (t1 == null) return 1;
+            if (t2 == null) return -1;
+            return t1.compareTo(t2); // ASC
+        });
+
+        int actualLimit = Math.min(limit, sortedEvents.size());
+        List<Event> limitedEvents = sortedEvents.subList(0, actualLimit);
+
+        List<TrendingEventResponse> dtoList = limitedEvents.stream().map(event -> {
             String organizerName = "Unknown";
             if (event.getOrganizerId() != null) {
                 try {
@@ -164,7 +263,6 @@ public class EventService {
                     ? volumeData.getHotness()
                     : 0.0;
 
-
             return TrendingEventResponse.builder()
                     .id(event.getId())
                     .eventName(event.getEventName())
@@ -175,7 +273,10 @@ public class EventService {
                     .hotness(hotness)
                     .ticketAvailabilityStatus(event.getTicketAvailabilityStatus())
                     .build();
-        });
+        }).toList();
+
+        Pageable resultPageable = PageRequest.of(0, limit);
+        Page<TrendingEventResponse> dtoPage = new PageImpl<>(dtoList, resultPageable, sortedEvents.size());
 
         return BasePageResponse.fromPage(dtoPage);
     }
@@ -216,6 +317,7 @@ public class EventService {
     }
 
     @Transactional
+    @Cacheable(value = "eventDetails", key = "#eventId")
     public EventResponse getEventById(Long eventId) {
         Event event = eventUtil.getEventOrElseThrow(eventId);
         if (event.getApprovalStatus() != EventApprovalStatus.PUBLISHED) {
@@ -245,6 +347,10 @@ public class EventService {
         eventViewRepository.save(view);
     }
 
+    @Caching(evict = {
+        @CacheEvict(value = "homepageEvents", allEntries = true),
+        @CacheEvict(value = "trendingEvents", allEntries = true)
+    })
     public Boolean createEvent(CreateEventRequest request, MultipartFile bannerFile, MultipartFile thumbnailFile, MultipartFile seatMapFile) {
 
         Long orgId = jwtUtil.getDataFromAuth().organizationId();
@@ -384,6 +490,11 @@ public class EventService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "eventDetails", key = "#eventId"),
+        @CacheEvict(value = "homepageEvents", allEntries = true),
+        @CacheEvict(value = "trendingEvents", allEntries = true)
+    })
     public EventResponse updateApprovalStatus(Long eventId, EventApprovalStatus approvalStatus) {
         if (approvalStatus == null || approvalStatus == EventApprovalStatus.PENDING_REVIEW) {
             throw new AppException(ErrorCode.BAD_REQUEST, "Approval status must be PUBLISHED or REJECTED");
@@ -396,6 +507,11 @@ public class EventService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "eventDetails", key = "#eventId"),
+        @CacheEvict(value = "homepageEvents", allEntries = true),
+        @CacheEvict(value = "trendingEvents", allEntries = true)
+    })
     public EventResponse updateEvent(Long eventId, UpdateEventRequest request) {
         Event event = eventUtil.getEventOrElseThrow(eventId);
 
@@ -478,6 +594,11 @@ public class EventService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "eventDetails", key = "#eventId"),
+        @CacheEvict(value = "homepageEvents", allEntries = true),
+        @CacheEvict(value = "trendingEvents", allEntries = true)
+    })
     public Boolean deleteEvent(Long eventId) {
         Event event = eventUtil.getEventOrElseThrow(eventId);
 
@@ -849,6 +970,7 @@ public class EventService {
     }
 
     @Transactional
+    @CacheEvict(value = "eventDetails", key = "#eventId")
     public EventResponse updateDraftStep1(Long eventId, CreateDraftStep1Request request, MultipartFile bannerFile, MultipartFile thumbnailFile) {
         Event event = eventUtil.getEventOrElseThrow(eventId);
         Long orgId = jwtUtil.getDataFromAuth().organizationId();
@@ -903,6 +1025,7 @@ public class EventService {
     }
 
     @Transactional
+    @CacheEvict(value = "eventDetails", key = "#eventId")
     public EventResponse updateDraftStep2(Long eventId, UpdateDraftStep2Request request, MultipartFile seatMapFile) {
         Event event = eventUtil.getEventOrElseThrow(eventId);
         Long orgId = jwtUtil.getDataFromAuth().organizationId();
@@ -982,6 +1105,7 @@ public class EventService {
     }
 
     @Transactional
+    @CacheEvict(value = "eventDetails", key = "#eventId")
     public EventResponse updateDraftStep3(Long eventId, UpdateDraftStep3Request request) {
         Event event = eventUtil.getEventOrElseThrow(eventId);
         Long orgId = jwtUtil.getDataFromAuth().organizationId();
@@ -1023,6 +1147,7 @@ public class EventService {
     }
 
     @Transactional
+    @CacheEvict(value = "eventDetails", key = "#eventId")
     public EventResponse updateDraftStep4(Long eventId, UpdateDraftStep4Request request) {
         Event event = eventUtil.getEventOrElseThrow(eventId);
         Long orgId = jwtUtil.getDataFromAuth().organizationId();
@@ -1045,6 +1170,11 @@ public class EventService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "eventDetails", key = "#eventId"),
+        @CacheEvict(value = "homepageEvents", allEntries = true),
+        @CacheEvict(value = "trendingEvents", allEntries = true)
+    })
     public EventResponse publishEvent(Long eventId) {
         Event event = eventUtil.getEventOrElseThrow(eventId);
         Long orgId = jwtUtil.getDataFromAuth().organizationId();
@@ -1136,6 +1266,11 @@ public class EventService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "eventDetails", key = "#eventId"),
+        @CacheEvict(value = "homepageEvents", allEntries = true),
+        @CacheEvict(value = "trendingEvents", allEntries = true)
+    })
     public EventResponse cancelEvent(Long eventId) {
         Event event = eventUtil.getEventOrElseThrow(eventId);
         Long orgId = jwtUtil.getDataFromAuth().organizationId();
