@@ -3,6 +3,11 @@ package com.capstone.inventoryservice.domain.service.chatbot;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
 import com.capstone.inventoryservice.security.JwtUtil;
+import com.google.genai.Client;
+import com.google.genai.types.GenerateContentConfig;
+import com.google.genai.types.GenerateContentResponse;
+import com.google.genai.types.ThinkingConfig;
+import com.google.genai.types.ThinkingLevel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -20,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,6 +57,54 @@ public class ChatBotService {
     }
 
     public record FileData(MimeType mimeType, Resource resource) {}
+
+    public Flux<String> chatStream(String question, List<MultipartFile> files, boolean useRag) {
+        Long userId = jwtUtil.getDataFromAuth().userId();
+
+        List<FileData> filesData = convertResources(files);
+        List<Media> mediaList = filesData.stream()
+                .map(fd -> new Media(fd.mimeType(), fd.resource()))
+                .toList();
+        List<Resource> resourceList = filesData.stream()
+                .map(FileData::resource)
+                .toList();
+
+        if (useRag && !resourceList.isEmpty()) {
+            CompletableFuture.runAsync(() -> ingestResources(resourceList));
+        }
+
+        return callToolCallingClientStream(userId, question, mediaList);
+    }
+
+    private Flux<String> callToolCallingClientStream(Long userId, String question, List<Media> mediaList) {
+        try {
+            String fullQuestion = (userId != null)
+                    ? question + "\n\n[Thông tin phiên: userId=" + userId + ", dùng giá trị này khi gọi tool cần userId]"
+                    : question;
+
+            Object conversationId = userId != null ? userId : "anonymous";
+
+            String model = mediaList != null && !mediaList.isEmpty() ? "gemini-3-flash-preview" : "gemini-3.1-flash-lite-preview";
+
+            return chatClient.prompt()
+                    .options(GoogleGenAiChatOptions.builder()
+                            .model(model)
+                            .build())
+                    .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, conversationId))
+                    .user(u -> {
+                        u.text(fullQuestion);
+                        if (mediaList != null && !mediaList.isEmpty()) {
+                            mediaList.forEach(u::media);
+                        }
+                    })
+                    .tools(evoTicketTools)
+                    .stream()
+                    .content();
+        } catch (Exception e) {
+            log.error("[ChatBot] Lỗi khi gọi AI (Tool Calling): {}", e.getMessage(), e);
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
 
     public String chat(String question, List<MultipartFile> files, boolean useRag) {
         Long userId = jwtUtil.getDataFromAuth().userId();

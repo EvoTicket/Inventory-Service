@@ -9,14 +9,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import reactor.core.publisher.Flux;
 
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+
+import java.io.PrintWriter;
 import java.util.List;
 
+@Slf4j
 @RequestMapping("/api/chatbot")
 @RestController
 @RequiredArgsConstructor
@@ -40,6 +42,46 @@ public class ChatBotController {
                         .build()
         );
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping(value = "/stream-ask")
+    public void streamChat(
+            @RequestParam String question,
+
+            @Parameter(
+                    content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)
+            )
+            @RequestParam(value = "files", required = false) List<MultipartFile> files,
+            @RequestParam(value = "useRag", required = false, defaultValue = "false") boolean useRag,
+            HttpServletResponse response
+    ) {
+        response.setContentType("text/event-stream");
+        response.setCharacterEncoding("UTF-8");
+        response.setHeader("Cache-Control", "no-cache");
+        response.setHeader("Connection", "keep-alive");
+        response.setHeader("X-Accel-Buffering", "no");
+
+        try {
+            PrintWriter writer = response.getWriter();
+            chatBotService.chatStream(question, files, useRag)
+                    .doOnNext(answerPart -> {
+                        writer.write("data:" + answerPart + "\n\n");
+                        writer.flush();
+                    })
+                    .doOnError(error -> {
+                        log.error("Error streaming chatbot response", error);
+                    })
+                    .doOnComplete(() -> {
+                        try {
+                            writer.close();
+                        } catch (Exception e) {
+                            // ignore
+                        }
+                    })
+                    .blockLast();
+        } catch (Exception e) {
+            log.error("Failed to stream chat", e);
+        }
     }
 
     @GetMapping("/history")
