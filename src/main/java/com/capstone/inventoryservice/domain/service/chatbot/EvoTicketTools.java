@@ -46,6 +46,44 @@ public class EvoTicketTools {
     private final SqlExecutorService sqlExecutorService;
 
     // =========================================================
+    // Tool: Text-to-SQL
+    // =========================================================
+
+    @Tool(description = """
+            Công cụ ƯU TIÊN HÀNG ĐẦU để truy vấn dữ liệu từ cơ sở dữ liệu EvoTicket.
+            Hãy LUÔN ƯU TIÊN sử dụng công cụ này bất cứ khi nào người dùng hỏi về các thông tin liên quan đến cơ sở dữ liệu (ví dụ: danh sách hoặc tìm kiếm sự kiện, lịch biểu diễn/showtimes, loại vé, lượt xem, đánh giá, các câu hỏi thống kê...) thay vì dùng các công cụ tìm kiếm cụ thể khác.
+            Hàm nhận vào câu hỏi tự nhiên của người dùng, sinh câu lệnh SQL và thực thi trực tiếp trên DB để trả về dữ liệu.
+            Truy vấn cơ sở dữ liệu EvoTicket trực tiếp bằng SQL để trả lời các câu hỏi phức tạp hoặc yêu cầu thống kê nâng cao về sự kiện, showtime, vé, đánh giá, lượt xem, v.v.
+            Dùng khi các công cụ cụ thể khác không đủ thông tin hoặc khi câu hỏi yêu cầu đếm, tính trung bình, sum, nhóm dữ liệu.
+            """)
+    public String queryDatabaseDirectly(
+            @ToolParam(description = "Câu hỏi tự nhiên của người dùng liên quan đến dữ liệu trong hệ thống") String userQuestion
+    ) {
+        log.info("[Tool] queryDatabaseDirectly called with question={}", userQuestion);
+        try {
+            String sqlQuery = sqlGeneratorService.generate(userQuestion);
+            List<?> results = sqlExecutorService.execute(sqlQuery);
+            if (results.isEmpty()) {
+                return "Không tìm thấy dữ liệu phù hợp với truy vấn.";
+            }
+
+            StringBuilder sb = new StringBuilder("=== KẾT QUẢ TRUY VẤN DATABASE ===\n");
+            sb.append("Câu lệnh SQL đã chạy:\n").append(sqlQuery).append("\n\nKết quả:\n");
+            for (Object row : results) {
+                if (row instanceof Object[]) {
+                    sb.append("- ").append(java.util.Arrays.toString((Object[]) row)).append("\n");
+                } else {
+                    sb.append("- ").append(row.toString()).append("\n");
+                }
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            log.error("[Tool] Loi khi thuc thi queryDatabaseDirectly: ", e);
+            return "Lỗi khi truy vấn cơ sở dữ liệu: " + e.getMessage();
+        }
+    }
+
+    // =========================================================
     // Tool: Tìm kiếm sự kiện
     // =========================================================
 
@@ -423,41 +461,5 @@ public class EvoTicketTools {
                 t.getSaleStartDate() != null ? t.getSaleStartDate().format(FORMATTER) : "N/A",
                 t.getSaleEndDate() != null ? t.getSaleEndDate().format(FORMATTER) : "N/A",
                 t.getTicketTypeStatus());
-    }
-
-    // =========================================================
-    // Tool: Text-to-SQL
-    // =========================================================
-
-    @Tool(description = """
-            Truy vấn cơ sở dữ liệu EvoTicket trực tiếp bằng SQL để trả lời các câu hỏi phức tạp hoặc yêu cầu thống kê nâng cao về sự kiện, showtime, vé, đánh giá, lượt xem, v.v.
-            Dùng khi các công cụ cụ thể khác không đủ thông tin hoặc khi câu hỏi yêu cầu đếm, tính trung bình, sum, nhóm dữ liệu.
-            Hàm nhận vào câu hỏi tự nhiên của người dùng và trả về kết quả dạng chuỗi văn bản mô tả dữ liệu tìm được.
-            """)
-    public String queryDatabaseDirectly(
-            @ToolParam(description = "Câu hỏi tự nhiên của người dùng liên quan đến dữ liệu trong hệ thống") String userQuestion
-    ) {
-        log.info("[Tool] queryDatabaseDirectly called with question={}", userQuestion);
-        try {
-            String sqlQuery = sqlGeneratorService.generate(userQuestion);
-            List<?> results = sqlExecutorService.execute(sqlQuery);
-            if (results.isEmpty()) {
-                return "Không tìm thấy dữ liệu phù hợp với truy vấn.";
-            }
-
-            StringBuilder sb = new StringBuilder("=== KẾT QUẢ TRUY VẤN DATABASE ===\n");
-            sb.append("Câu lệnh SQL đã chạy:\n").append(sqlQuery).append("\n\nKết quả:\n");
-            for (Object row : results) {
-                if (row instanceof Object[]) {
-                    sb.append("- ").append(java.util.Arrays.toString((Object[]) row)).append("\n");
-                } else {
-                    sb.append("- ").append(row.toString()).append("\n");
-                }
-            }
-            return sb.toString();
-        } catch (Exception e) {
-            log.error("[Tool] Loi khi thuc thi queryDatabaseDirectly: ", e);
-            return "Lỗi khi truy vấn cơ sở dữ liệu: " + e.getMessage();
-        }
     }
 }
