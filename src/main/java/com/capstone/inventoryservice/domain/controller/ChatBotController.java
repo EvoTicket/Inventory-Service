@@ -3,6 +3,8 @@ package com.capstone.inventoryservice.domain.controller;
 import com.capstone.inventoryservice.domain.dto.BaseResponse;
 import com.capstone.inventoryservice.domain.dto.response.ChatBotResponse;
 import com.capstone.inventoryservice.domain.service.chatbot.ChatBotService;
+import com.capstone.inventoryservice.domain.service.chatbot.SqlExecutorService;
+import com.capstone.inventoryservice.domain.service.chatbot.SqlGeneratorService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ChatBotController {
     private final ChatBotService chatBotService;
+    private final SqlGeneratorService sqlGeneratorService;
+    private final SqlExecutorService sqlExecutorService;
 
     @PostMapping(value = "/ask", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<BaseResponse<ChatBotResponse>> smartChat(
@@ -93,5 +97,14 @@ public class ChatBotController {
     public ResponseEntity<BaseResponse<Boolean>> clearHistory() {
         chatBotService.clearChatHistory();
         return ResponseEntity.ok(BaseResponse.ok(true));
+    }
+
+    @PostMapping("/query")
+    public ResponseEntity<BaseResponse<List<?>>> executeSqlQuery(
+            @RequestParam String question
+    ) {
+        String sqlQuery = sqlGeneratorService.generate(question);
+        List<?> results = sqlExecutorService.execute(sqlQuery);
+        return ResponseEntity.ok(BaseResponse.ok(results));
     }
 }
