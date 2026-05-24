@@ -69,8 +69,14 @@ public class ChatBotController {
             PrintWriter writer = response.getWriter();
             chatBotService.chatStream(question, files, useRag)
                     .doOnNext(answerPart -> {
-                        writer.write("data:" + answerPart + "\n\n");
-                        writer.flush();
+                        if (answerPart != null) {
+                            String[] lines = answerPart.split("\n", -1);
+                            for (String line : lines) {
+                                writer.write("data: " + line + "\n");
+                            }
+                            writer.write("\n");
+                            writer.flush();
+                        }
                     })
                     .doOnError(error -> {
                         log.error("Error streaming chatbot response", error);
