@@ -82,6 +82,8 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
 
     Page<Event> findByOrganizerId(Long organizerId, Pageable pageable);
 
+    boolean existsByEventName(String eventName);
+
     void deleteByApprovalStatusAndCreatedAtBefore(EventApprovalStatus status, LocalDateTime dateTime);
 
     long countByOrganizerIdAndApprovalStatus(Long organizerId, EventApprovalStatus status);
