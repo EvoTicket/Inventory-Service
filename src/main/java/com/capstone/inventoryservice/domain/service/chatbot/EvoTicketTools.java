@@ -15,6 +15,9 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.capstone.inventoryservice.domain.service.EventService;
+import com.capstone.inventoryservice.domain.dto.BasePageResponse;
+import com.capstone.inventoryservice.domain.dto.response.TrendingEventResponse;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -42,6 +45,47 @@ public class EvoTicketTools {
     private final ShowtimeRepository showtimeRepository;
     private final TicketTypeRepository ticketTypeRepository;
     private final UserFavoriteEventRepository userFavoriteEventRepository;
+    private final SqlGeneratorService sqlGeneratorService;
+    private final SqlExecutorService sqlExecutorService;
+    private final EventService eventService;
+
+    // =========================================================
+    // Tool: Text-to-SQL
+    // =========================================================
+
+    @Tool(description = """
+            Công cụ ƯU TIÊN HÀNG ĐẦU để truy vấn dữ liệu từ cơ sở dữ liệu EvoTicket.
+            Hãy LUÔN ƯU TIÊN sử dụng công cụ này bất cứ khi nào người dùng hỏi về các thông tin liên quan đến cơ sở dữ liệu (ví dụ: danh sách hoặc tìm kiếm sự kiện, lịch biểu diễn/showtimes, loại vé, lượt xem, đánh giá, các câu hỏi thống kê...) thay vì dùng các công cụ tìm kiếm cụ thể khác.
+            Hàm nhận vào câu hỏi tự nhiên của người dùng, sinh câu lệnh SQL và thực thi trực tiếp trên DB để trả về dữ liệu.
+            Truy vấn cơ sở dữ liệu EvoTicket trực tiếp bằng SQL để trả lời các câu hỏi phức tạp hoặc yêu cầu thống kê nâng cao về sự kiện, showtime, vé, đánh giá, lượt xem, v.v.
+            Dùng khi các công cụ cụ thể khác không đủ thông tin hoặc khi câu hỏi yêu cầu đếm, tính trung bình, sum, nhóm dữ liệu.
+            """)
+    public String queryDatabaseDirectly(
+            @ToolParam(description = "Câu hỏi tự nhiên của người dùng liên quan đến dữ liệu trong hệ thống") String userQuestion
+    ) {
+        log.info("[Tool] queryDatabaseDirectly called with question={}", userQuestion);
+        try {
+            String sqlQuery = sqlGeneratorService.generate(userQuestion);
+            List<?> results = sqlExecutorService.execute(sqlQuery);
+            if (results.isEmpty()) {
+                return "Không tìm thấy dữ liệu phù hợp với truy vấn.";
+            }
+
+            StringBuilder sb = new StringBuilder("=== KẾT QUẢ TRUY VẤN DATABASE ===\n");
+            sb.append("Câu lệnh SQL đã chạy:\n").append(sqlQuery).append("\n\nKết quả:\n");
+            for (Object row : results) {
+                if (row instanceof Object[]) {
+                    sb.append("- ").append(java.util.Arrays.toString((Object[]) row)).append("\n");
+                } else {
+                    sb.append("- ").append(row.toString()).append("\n");
+                }
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            log.error("[Tool] Loi khi thuc thi queryDatabaseDirectly: ", e);
+            return "Lỗi khi truy vấn cơ sở dữ liệu: " + e.getMessage();
+        }
+    }
 
     // =========================================================
     // Tool: Tìm kiếm sự kiện
@@ -304,11 +348,13 @@ public class EvoTicketTools {
         int actualLimit = (limit == null || limit <= 0) ? 5 : limit;
         log.info("[Tool] getTrendingEvents called with limit={}", actualLimit);
 
-        Page<Event> trending = eventRepository.findTrendingEvents(LocalDateTime.now(), PageRequest.of(0, actualLimit));
-        if (trending.isEmpty()) return "Hiện chưa có thống kê sự kiện hot.";
+        BasePageResponse<TrendingEventResponse> trendingResponse = eventService.getTrendingEvents(actualLimit);
+        if (trendingResponse == null || trendingResponse.getContent() == null || trendingResponse.getContent().isEmpty()) {
+            return "Hiện chưa có thống kê sự kiện hot.";
+        }
 
         StringBuilder sb = new StringBuilder("=== SỰ KIỆN HOT NHẤT ===\n");
-        trending.forEach(e -> sb.append(formatEventSummary(e)));
+        trendingResponse.getContent().forEach(t -> sb.append(formatTrendingEvent(t)));
         return sb.toString();
     }
 
@@ -362,6 +408,24 @@ public class EvoTicketTools {
                 e.getEventName(),
                 start != null ? start.format(FORMATTER) : "N/A",
                 e.getEventStatus());
+    }
+
+    private String formatTrendingEvent(TrendingEventResponse t) {
+        String ticketStatus = "N/A";
+        if (t.getTicketAvailabilityStatus() != null) {
+            ticketStatus = switch (t.getTicketAvailabilityStatus()) {
+                case AVAILABLE -> "Còn vé";
+                case ALMOST_SOLD_OUT -> "Sắp cháy vé";
+                case SOLD_OUT -> "Hết vé";
+            };
+        }
+        return String.format("• [ID:%d] %s | BTC: %s | Giá từ: %s VND | Độ hot: %.1f | Vé: %s\n",
+                t.getId(),
+                t.getEventName(),
+                t.getOrganizerName() != null ? t.getOrganizerName() : "N/A",
+                t.getFloorPrice() != null ? t.getFloorPrice().toString() : "N/A",
+                t.getHotness() != null ? t.getHotness() : 0.0,
+                ticketStatus);
     }
 
     private String formatEventDetail(Event e) {

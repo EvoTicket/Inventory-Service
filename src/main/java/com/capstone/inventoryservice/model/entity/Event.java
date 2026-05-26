@@ -324,7 +324,7 @@ public class Event {
         }
 
 
-        if (this.getMinSaleStart() != null && now.isBefore(this.getMinSaleStart())) {
+        if (this.getEarliestStart() != null && now.isBefore(this.getEarliestStart())) {
             return EventStatus.UPCOMING;
         }
 

@@ -81,6 +81,12 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     List<Event> findByOrganizerId(@Param("organizerId") Long organizerId);
 
     Page<Event> findByOrganizerId(Long organizerId, Pageable pageable);
+    
+    @Query("SELECT DISTINCT e FROM Event e " +
+            "WHERE e.isCancelled = false " +
+            "AND e.approvalStatus = com.capstone.inventoryservice.model.enums.EventApprovalStatus.PUBLISHED " +
+            "AND e.id IN (SELECT s.event.id FROM Showtime s WHERE s.endDatetime > :now)")
+    List<Event> findCandidateEvents(@Param("now") LocalDateTime now);
 
     boolean existsByEventName(String eventName);
 

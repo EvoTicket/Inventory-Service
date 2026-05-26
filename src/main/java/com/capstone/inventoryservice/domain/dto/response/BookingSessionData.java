@@ -16,6 +16,7 @@ public class BookingSessionData {
     private LocalDateTime time;
     private String venue;
     private BigDecimal totalAmount;
+    private boolean allowDiscountCode;
 
     @Data
     public static class BookingItem {
@@ -47,6 +48,7 @@ public class BookingSessionData {
             data.setEventName(firstTicketType.getShowtime().getEvent().getEventName());
             data.setTime(firstTicketType.getShowtime().getStartDatetime());
             data.setVenue(firstTicketType.getShowtime().getFullAddress());
+            data.setAllowDiscountCode(firstTicketType.getShowtime().getEvent().getAllowDiscountCode());
         }
 
         data.setTotalAmount(data.getItems().stream()

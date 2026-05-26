@@ -3,25 +3,31 @@ package com.capstone.inventoryservice.domain.controller;
 import com.capstone.inventoryservice.domain.dto.BaseResponse;
 import com.capstone.inventoryservice.domain.dto.response.ChatBotResponse;
 import com.capstone.inventoryservice.domain.service.chatbot.ChatBotService;
+import com.capstone.inventoryservice.domain.service.chatbot.SqlExecutorService;
+import com.capstone.inventoryservice.domain.service.chatbot.SqlGeneratorService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import reactor.core.publisher.Flux;
 
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+
+import java.io.PrintWriter;
 import java.util.List;
 
+@Slf4j
 @RequestMapping("/api/chatbot")
 @RestController
 @RequiredArgsConstructor
 public class ChatBotController {
     private final ChatBotService chatBotService;
+    private final SqlGeneratorService sqlGeneratorService;
+    private final SqlExecutorService sqlExecutorService;
 
     @PostMapping(value = "/ask", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<BaseResponse<ChatBotResponse>> smartChat(
@@ -42,6 +48,52 @@ public class ChatBotController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping(value = "/stream-ask")
+    public void streamChat(
+            @RequestParam String question,
+
+            @Parameter(
+                    content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)
+            )
+            @RequestParam(value = "files", required = false) List<MultipartFile> files,
+            @RequestParam(value = "useRag", required = false, defaultValue = "false") boolean useRag,
+            HttpServletResponse response
+    ) {
+        response.setContentType("text/event-stream");
+        response.setCharacterEncoding("UTF-8");
+        response.setHeader("Cache-Control", "no-cache");
+        response.setHeader("Connection", "keep-alive");
+        response.setHeader("X-Accel-Buffering", "no");
+
+        try {
+            PrintWriter writer = response.getWriter();
+            chatBotService.chatStream(question, files, useRag)
+                    .doOnNext(answerPart -> {
+                        if (answerPart != null) {
+                            String[] lines = answerPart.split("\n", -1);
+                            for (String line : lines) {
+                                writer.write("data: " + line + "\n");
+                            }
+                            writer.write("\n");
+                            writer.flush();
+                        }
+                    })
+                    .doOnError(error -> {
+                        log.error("Error streaming chatbot response", error);
+                    })
+                    .doOnComplete(() -> {
+                        try {
+                            writer.close();
+                        } catch (Exception e) {
+                            // ignore
+                        }
+                    })
+                    .blockLast();
+        } catch (Exception e) {
+            log.error("Failed to stream chat", e);
+        }
+    }
+
     @GetMapping("/history")
     public ResponseEntity<BaseResponse<List<Message>>> chatMessages(){
         return ResponseEntity.ok(BaseResponse.ok(chatBotService.getChatMessages()));
@@ -51,5 +103,14 @@ public class ChatBotController {
     public ResponseEntity<BaseResponse<Boolean>> clearHistory() {
         chatBotService.clearChatHistory();
         return ResponseEntity.ok(BaseResponse.ok(true));
+    }
+
+    @PostMapping("/query")
+    public ResponseEntity<BaseResponse<List<?>>> executeSqlQuery(
+            @RequestParam String question
+    ) {
+        String sqlQuery = sqlGeneratorService.generate(question);
+        List<?> results = sqlExecutorService.execute(sqlQuery);
+        return ResponseEntity.ok(BaseResponse.ok(results));
     }
 }

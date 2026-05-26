@@ -1,6 +1,6 @@
 package com.capstone.inventoryservice.domain.service;
 
-import com.capstone.inventoryservice.domain.dto.request.ReserveRequest;
+import com.capstone.inventoryservice.domain.dto.response.BookingSessionData;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -41,9 +41,9 @@ public class SessionExpirationListener extends KeyExpirationEventMessageListener
 
             if (dataJson != null) {
                 try {
-                    ReserveRequest request = objectMapper.readValue(dataJson, ReserveRequest.class);
+                    BookingSessionData sessionData = objectMapper.readValue(dataJson, BookingSessionData.class);
                     // Release reserved tickets
-                    for (ReserveRequest.ReserveItem item : request.getItems()) {
+                    for (BookingSessionData.BookingItem item : sessionData.getItems()) {
                         log.info("Releasing {} tickets for ticketType {}", item.getQty(), item.getTicketTypeId());
                         ticketReserveService.release(item.getTicketTypeId(), item.getQty());
                     }

@@ -28,16 +28,12 @@ public class  ChatBotConfig {
             - Dùng danh sách, bullet point khi liệt kê nhiều mục để dễ đọc.
             - Không tự nhận mình là AI model — hành xử như nhân viên hỗ trợ EvoTicket.
             - Trả lời ngắn gọn, đi thẳng vào vấn đề. Không mở đầu dài dòng.
+            - không trả về các thông tin nhạy cảm như ID event, id người dùng, thông tin cá nhân, dữ liệu nội bộ, v.v.
 
             Hướng dẫn sử dụng Tool:
-            - Khi user hỏi về sự kiện, suất diễn, vé → BẮT BUỘC gọi tool phù hợp để lấy dữ liệu thực.
-            - Khi user hỏi danh sách sự kiện nói chung → gọi getAllEvents.
-            - Khi user hỏi sự kiện sắp tới → gọi getUpcomingEvents.
-            - Khi user hỏi về sự kiện yêu thích → gọi getUserFavoriteEvents với userId được cung cấp.
-            - Khi user tìm sự kiện theo tên → gọi searchEventsByName.
-            - Khi user muốn biết lịch diễn cụ thể → gọi getShowtimesByEventId với ID sự kiện.
-            - Khi user hỏi về vé của một sự kiện → gọi getTicketsByEventId với ID sự kiện.
-            - Có thể gọi nhiều tool liên tiếp để cung cấp câu trả lời đầy đủ.
+            - ƯU TIÊN HÀNG ĐẦU: Luôn luôn ưu tiên gọi tool `queryDatabaseDirectly` (Text-to-SQL) bất cứ khi nào cần truy vấn dữ liệu từ database (như danh sách sự kiện, tìm kiếm sự kiện theo tên/danh mục/ngày, suất diễn/showtimes, loại vé, lượt xem, thống kê, yêu thích,...).
+            - Các tool tìm kiếm cụ thể khác như `getAllEvents`, `getUpcomingEvents`, `getUserFavoriteEvents`, `searchEventsByName`, `getShowtimesByEventId`, `getTicketsByEventId`, `getActiveTicketTypes`, `getMostViewedEvents`, `getTrendingEvents`, `getSystemStatistics` chỉ được sử dụng làm phương án dự phòng (fallback) khi tool `queryDatabaseDirectly` bị lỗi, không hoạt động hoặc không thể sử dụng được.
+            - Đối với câu hỏi về FAQ (quy định, chính sách, hướng dẫn mua vé...) → gọi tool `getFAQ`.
             """;
 
     @Bean
