@@ -84,7 +84,7 @@ public class ChatBotService {
 
             Object conversationId = userId != null ? userId : "anonymous";
 
-            String model = mediaList != null && !mediaList.isEmpty() ? "gemini-3-flash-preview" : "gemini-3.1-flash-lite-preview";
+            String model = mediaList != null && !mediaList.isEmpty() ? "gemini-3-flash-preview" : "gemini-3.1-flash-lite";
 
             return chatClient.prompt()
                     .options(GoogleGenAiChatOptions.builder()
@@ -132,7 +132,7 @@ public class ChatBotService {
 
             Object conversationId = userId != null ? userId : "anonymous";
 
-            String model = mediaList != null && !mediaList.isEmpty() ? "gemini-3-flash-preview" : "gemini-3.1-flash-lite-preview";
+            String model = mediaList != null && !mediaList.isEmpty() ? "gemini-3.5-flash" : "gemini-3.1-flash-lite";
 
             return chatClient.prompt()
                     .options(GoogleGenAiChatOptions.builder()
