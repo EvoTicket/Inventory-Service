@@ -327,6 +327,12 @@ public class EventService {
         return convertToDTO(event);
     }
 
+    @Transactional(readOnly = true)
+    public EventResponse getEventByIdForAdmin(Long eventId) {
+        Event event = eventUtil.getEventOrElseThrow(eventId);
+        return convertToDTO(event);
+    }
+
     private void recordView(Event event) {
         Long userId = null;
         try {

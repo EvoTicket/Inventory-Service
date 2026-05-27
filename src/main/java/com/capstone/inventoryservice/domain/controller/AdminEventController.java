@@ -81,4 +81,12 @@ public class AdminEventController {
         EventModerationSummaryResponse response = eventService.getModerationSummary();
         return ResponseEntity.ok(BaseResponse.ok("Lấy thông tin tổng quan duyệt sự kiện thành công", response));
     }
+
+    @GetMapping("/{eventId}")
+    public ResponseEntity<BaseResponse<EventResponse>> getEventDetail(
+            @PathVariable Long eventId
+    ) {
+        EventResponse response = eventService.getEventByIdForAdmin(eventId);
+        return ResponseEntity.ok(BaseResponse.ok("Lấy chi tiết sự kiện thành công", response));
+    }
 }
