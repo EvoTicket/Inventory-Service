@@ -489,6 +489,45 @@ public class EventService {
         return buildEventPageResponse(eventPage, pageable);
     }
 
+    @Transactional(readOnly = true)
+    public BasePageResponse<ListEventResponse> getEventsForModeration(EventFilterRequest filter) {
+        if (filter.getApprovalStatuses() == null || filter.getApprovalStatuses().isEmpty()) {
+            filter.setApprovalStatuses(List.of(EventApprovalStatus.PENDING_REVIEW, EventApprovalStatus.REJECTED));
+        }
+        Specification<Event> spec = EventSpecification.withFilters(filter);
+        Pageable pageable = buildPageable(filter);
+        Page<Event> eventPage = eventRepository.findAll(spec, pageable);
+        BasePageResponse<ListEventResponse> response = buildEventPageResponse(eventPage, pageable);
+
+        if (response.getContent() != null) {
+            for (ListEventResponse dto : response.getContent()) {
+                if (dto.getOrganizerId() != null) {
+                    try {
+                        OrgInternalResponse org = iamFeignClient.getOrganizationById(dto.getOrganizerId());
+                        if (org != null) {
+                            dto.setOrganizerName(org.getOrganizationName());
+                        }
+                    } catch (Exception e) {
+                        log.error("Error fetching organization name for orgId: {}", dto.getOrganizerId(), e);
+                        dto.setOrganizerName("Unknown");
+                    }
+                }
+            }
+        }
+        return response;
+    }
+
+    @Transactional(readOnly = true)
+    public EventModerationSummaryResponse getModerationSummary() {
+        long pending = eventRepository.countByApprovalStatus(EventApprovalStatus.PENDING_REVIEW);
+        long rejected = eventRepository.countByApprovalStatus(EventApprovalStatus.REJECTED);
+        return EventModerationSummaryResponse.builder()
+                .pendingCount(pending)
+                .rejectedCount(rejected)
+                .build();
+    }
+
+
     @Transactional
     @Caching(evict = {
         @CacheEvict(value = "eventDetails", key = "#eventId"),
