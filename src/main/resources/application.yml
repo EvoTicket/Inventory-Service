@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: inventory-service
+  app:
+    data-initializer:
+      enabled: true
   security:
     jwt:
       secret-key: ${JWT_SECRET_KEY}
