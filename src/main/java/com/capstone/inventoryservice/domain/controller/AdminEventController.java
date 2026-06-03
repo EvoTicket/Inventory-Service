@@ -47,6 +47,13 @@ public class AdminEventController {
     }
 
     @PatchMapping("/{eventId}/approval")
+    @com.capstone.inventoryservice.config.audit.AuditAction(
+            action = "Duyệt sự kiện",
+            module = "Event Moderation",
+            severity = "High",
+            sensitive = true,
+            targetType = "Event"
+    )
     public ResponseEntity<BaseResponse<EventResponse>> updateApproval(
             @PathVariable Long eventId,
             @Valid @RequestBody EventApprovalRequest request

@@ -497,6 +497,18 @@ public class EventService {
 
     @Transactional(readOnly = true)
     public BasePageResponse<ListEventResponse> getEventsForModeration(EventFilterRequest filter) {
+        if (filter.getApprovalStatuses() == null || filter.getApprovalStatuses().isEmpty()) {
+            filter.setApprovalStatuses(List.of(
+                    EventApprovalStatus.PENDING_REVIEW,
+                    EventApprovalStatus.PUBLISHED,
+                    EventApprovalStatus.REJECTED,
+                    EventApprovalStatus.CANCELLED
+            ));
+        } else {
+            List<EventApprovalStatus> statuses = new ArrayList<>(filter.getApprovalStatuses());
+            statuses.remove(EventApprovalStatus.DRAFT);
+            filter.setApprovalStatuses(statuses);
+        }
         Specification<Event> spec = EventSpecification.withFilters(filter);
         Pageable pageable = buildPageable(filter);
         Page<Event> eventPage = eventRepository.findAll(spec, pageable);

@@ -233,6 +233,13 @@ public class  EventController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @com.capstone.inventoryservice.config.audit.AuditAction(
+            action = "Tạo sự kiện",
+            module = "Event Management",
+            severity = "Medium",
+            sensitive = false,
+            targetType = "Event"
+    )
     public ResponseEntity<BaseResponse<Boolean>> createEvent(
             @Valid
             @RequestPart("event")
@@ -265,6 +272,13 @@ public class  EventController {
     }
 
     @PutMapping("/{eventId}")
+    @com.capstone.inventoryservice.config.audit.AuditAction(
+            action = "Cập nhật sự kiện",
+            module = "Event Management",
+            severity = "Medium",
+            sensitive = false,
+            targetType = "Event"
+    )
     public ResponseEntity<BaseResponse<EventResponse>> updateEvent(
             @PathVariable Long eventId,
             @Valid @RequestBody UpdateEventRequest request) {
@@ -355,6 +369,13 @@ public class  EventController {
     }
 
     @PostMapping("/{eventId}/publish")
+    @com.capstone.inventoryservice.config.audit.AuditAction(
+            action = "Xuất bản sự kiện",
+            module = "Event Management",
+            severity = "Medium",
+            sensitive = false,
+            targetType = "Event"
+    )
     public ResponseEntity<BaseResponse<EventResponse>> publishEvent(
             @PathVariable Long eventId
     ) {
@@ -376,6 +397,13 @@ public class  EventController {
 
     @PostMapping("/{eventId}/cancel")
     @Operation(summary = "Hủy sự kiện", description = "Hủy một sự kiện đang hoặc sắp diễn ra")
+    @com.capstone.inventoryservice.config.audit.AuditAction(
+            action = "Hủy sự kiện",
+            module = "Event Management",
+            severity = "High",
+            sensitive = true,
+            targetType = "Event"
+    )
     public ResponseEntity<BaseResponse<EventResponse>> cancelEvent(@PathVariable Long eventId) {
         return ResponseEntity.ok(BaseResponse.ok("Hủy sự kiện thành công", eventService.cancelEvent(eventId)));
     }
