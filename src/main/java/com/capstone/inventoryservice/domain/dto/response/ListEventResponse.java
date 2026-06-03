@@ -39,6 +39,7 @@ public class ListEventResponse {
 
     private Integer totalSeats;
     private Long organizerId;
+    private String organizerName;
     private Boolean isFeatured;
 
     private EventCategory category;

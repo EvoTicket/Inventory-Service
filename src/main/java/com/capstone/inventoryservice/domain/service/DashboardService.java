@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
@@ -60,18 +61,35 @@ public class DashboardService {
         LocalDateTime since = LocalDateTime.now().minusDays(days).withHour(0).withMinute(0).withSecond(0);
         long newUsers = iamFeignClient.getNewUsersCount(since.format(DateTimeFormatter.ISO_DATE_TIME));
 
+        Map<LocalDate, DailyStatsInternalDto> trendMap = stats.getTrend() != null ?
+                stats.getTrend().stream().collect(Collectors.toMap(
+                        DailyStatsInternalDto::getDate,
+                        d -> d,
+                        (existing, replacement) -> existing
+                )) : Collections.emptyMap();
+
+        List<PlatformDashboardResponse.DailyTrendDto> paddedTrend = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        for (int i = days - 1; i >= 0; i--) {
+            LocalDate date = today.minusDays(i);
+            DailyStatsInternalDto dayStats = trendMap.get(date);
+            
+            BigDecimal gmv = dayStats != null ? dayStats.getGmv() : BigDecimal.ZERO;
+            long tickets = dayStats != null ? dayStats.getTicketsSold() : 0L;
+
+            paddedTrend.add(PlatformDashboardResponse.DailyTrendDto.builder()
+                    .date(date.toString())
+                    .gmv(gmv)
+                    .ticketsSold(tickets)
+                    .build());
+        }
+
         return PlatformDashboardResponse.builder()
                 .totalGmv(stats.getTotalGmv())
                 .totalRevenue(stats.getTotalRevenue())
                 .totalTicketsSold(stats.getTotalTicketsSold())
                 .newUsersCount(newUsers)
-                .trend(stats.getTrend().stream()
-                        .map(d -> PlatformDashboardResponse.DailyTrendDto.builder()
-                                .date(d.getDate().toString())
-                                .gmv(d.getGmv())
-                                .ticketsSold(d.getTicketsSold())
-                                .build())
-                        .collect(Collectors.toList()))
+                .trend(paddedTrend)
                 .build();
     }
 
