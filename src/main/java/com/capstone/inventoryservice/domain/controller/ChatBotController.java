@@ -117,7 +117,7 @@ public class ChatBotController {
         return ResponseEntity.ok(BaseResponse.ok(true));
     }
 
-    @PatchMapping("/conversations/{id}/title")
+    @PutMapping("/conversations/{id}/title")
     public ResponseEntity<BaseResponse<ChatConversation>> renameConversation(
             @PathVariable String id,
             @RequestParam String title
