@@ -358,35 +358,6 @@ public class EvoTicketTools {
         return sb.toString();
     }
 
-    @Tool(description = """
-            Trả về câu trả lời cho các câu hỏi thường gặp (FAQ) về hệ thống EvoTicket như: 
-            Cách mua vé, cách thanh toán, quy định hoàn tiền, hỗ trợ khách hàng, vé điện tử, blockchain.
-            Dùng khi user hỏi các câu hỏi chung về quy trình hoặc quy định của hệ thống.
-            """)
-    public String getFAQ() {
-        log.info("[Tool] getFAQ called");
-        return """
-                === CÂU HỎI THƯỜNG GẶP (FAQ) ===
-                
-                1. Làm thế nào để mua vé trên EvoTicket?
-                   Bạn chỉ cần chọn sự kiện yêu thích, chọn suất diễn và loại vé, sau đó nhấn 'Mua ngay'. Hệ thống hỗ trợ thanh toán qua VNPay và các ví điện tử phổ biến.
-                
-                2. Tôi nhận vé bằng cách nào?
-                   Sau khi thanh toán thành công, vé điện tử dưới dạng QR Code sẽ được gửi về Email của bạn và hiển thị trong mục 'Vé của tôi' trên website.
-                
-                3. Quy định về việc hoàn trả hoặc hủy vé?
-                   Việc hoàn trả vé phụ thuộc vào chính sách riêng của từng Ban tổ chức (BTC). Bạn có thể xem thông tin này trong phần mô tả sự kiện hoặc liên hệ trực tiếp với BTC.
-                
-                4. Tại sao EvoTicket sử dụng Blockchain?
-                   Chúng tôi sử dụng Blockchain để định danh mỗi chiếc vé, đảm bảo vé không thể bị làm giả, giúp bạn an tâm khi mua vé và hỗ trợ chuyển nhượng vé an toàn.
-                
-                5. Tôi có thể chuyển nhượng vé cho người khác không?
-                   Có, bạn có thể sử dụng tính năng 'Ký gửi/Chuyển nhượng' trong mục quản lý vé để bán lại hoặc tặng vé cho người khác một cách minh bạch.
-                
-                6. Làm sao để liên hệ với bộ phận hỗ trợ khách hàng?
-                   Bạn có thể gửi yêu cầu qua email support@evoticket.com hoặc liên hệ Fanpage EvoTicket để được hỗ trợ nhanh nhất.
-                """;
-    }
 
     public String getAllCategories() {
         log.info("[Tool] getAllCategories called");
