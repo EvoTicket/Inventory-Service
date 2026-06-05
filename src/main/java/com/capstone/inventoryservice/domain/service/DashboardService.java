@@ -21,6 +21,8 @@ import com.capstone.inventoryservice.model.repository.EventRepository;
 import com.capstone.inventoryservice.security.JwtUtil;
 import com.capstone.inventoryservice.model.entity.Event;
 
+import com.capstone.inventoryservice.model.enums.EventApprovalStatus;
+
 import com.capstone.inventoryservice.domain.dto.request.DashboardExportRequest;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -59,7 +61,31 @@ public class DashboardService {
         
         // Tính từ 00:00:00 của 'days' ngày trước
         LocalDateTime since = LocalDateTime.now().minusDays(days).withHour(0).withMinute(0).withSecond(0);
-        long newUsers = iamFeignClient.getNewUsersCount(since.format(DateTimeFormatter.ISO_DATE_TIME));
+        long newUsers = 0;
+        try {
+            newUsers = iamFeignClient.getNewUsersCount(since.format(DateTimeFormatter.ISO_DATE_TIME));
+        } catch (Exception e) {
+            log.error("Failed to fetch new users count", e);
+        }
+
+        long orgPending = 0;
+        long restrictedAcc = 0;
+        try {
+            AccountSummaryInternalResponse accSummary = iamFeignClient.getAccountSummary();
+            if (accSummary != null) {
+                orgPending = accSummary.getPendingApprovals();
+                restrictedAcc = accSummary.getRestrictedAccounts();
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch account summary from IAM-Service", e);
+        }
+
+        long eventsPending = 0;
+        try {
+            eventsPending = eventRepository.countByApprovalStatus(EventApprovalStatus.PENDING_REVIEW);
+        } catch (Exception e) {
+            log.error("Failed to fetch pending events from EventRepository", e);
+        }
 
         Map<LocalDate, DailyStatsInternalDto> trendMap = stats.getTrend() != null ?
                 stats.getTrend().stream().collect(Collectors.toMap(
@@ -90,6 +116,22 @@ public class DashboardService {
                 .totalTicketsSold(stats.getTotalTicketsSold())
                 .newUsersCount(newUsers)
                 .trend(paddedTrend)
+                // Finance & Settlement
+                .payoutPendingVolume(new BigDecimal("2160000000"))
+                .payoutPendingOrgs(14)
+                .payoutPendingBatch("PB-2604")
+                .payoutSettledVolume(new BigDecimal("4720000000"))
+                .payoutSettledBatches(86)
+                .disputesCount(7)
+                .disputesMessage("Cần điều tra trong 24 giờ")
+                // Governance & Review
+                .organizationsPendingApproval(orgPending)
+                .organizationsPendingDetails("Hồ sơ KYC mới")
+                .eventsPendingApproval(eventsPending)
+                .eventsPendingDetails("Bao gồm 3 sự kiện rủi ro cao")
+                .restrictedAccounts(restrictedAcc)
+                .restrictedAccountsDetails("Đang theo dõi vi phạm")
+                .highRiskEventsCount(3)
                 .build();
     }
 

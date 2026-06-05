@@ -24,4 +24,7 @@ public interface IAMFeignClient {
 
     @GetMapping("/bank-infos/{id}")
     BankInfoInternalResponse getBankInfoById(@PathVariable("id") Long id);
+
+    @GetMapping("/accounts/summary")
+    AccountSummaryInternalResponse getAccountSummary();
 }
