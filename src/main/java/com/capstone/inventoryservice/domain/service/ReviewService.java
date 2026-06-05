@@ -145,7 +145,7 @@ public class ReviewService {
 
     @Transactional
     public List<ReviewResponse> getReviewsByEventId(Long eventId) {
-        return reviewRepository.findByEventIdOrderByCreatedAtAsc(eventId).stream()
+        return reviewRepository.findByEventIdOrderByCreatedAtDesc(eventId).stream()
                 .map(reviewMapper::mapToResponse)
                 .toList();
     }
