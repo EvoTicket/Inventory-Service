@@ -55,4 +55,12 @@ public class ReviewController {
     public ResponseEntity<BaseResponse<Boolean>> deleteReview(@PathVariable Long reviewId) {
         return ResponseEntity.ok(BaseResponse.ok(reviewService.deleteReview(reviewId)));
     }
+
+    @GetMapping("/event/{eventId}")
+    public ResponseEntity<BaseResponse<List<ReviewResponse>>> getReviewsByEventId(
+            @PathVariable Long eventId
+    ) {
+        List<ReviewResponse> response = reviewService.getReviewsByEventId(eventId);
+        return ResponseEntity.ok(BaseResponse.ok(response));
+    }
 }

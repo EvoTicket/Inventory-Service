@@ -39,8 +39,6 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
             FROM Event e
             LEFT JOIN FETCH e.showtimes s
             LEFT JOIN FETCH s.ticketTypes tt
-            LEFT JOIN FETCH e.reviews r
-            LEFT JOIN FETCH r.images
             WHERE e.id = :eventId
             """)
     Optional<Event> findByIdWithDetails(@Param("eventId") Long eventId);
