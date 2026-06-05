@@ -4,6 +4,7 @@ import com.capstone.inventoryservice.domain.dto.BasePageResponse;
 import com.capstone.inventoryservice.domain.dto.BaseResponse;
 import com.capstone.inventoryservice.domain.dto.response.UserFavoriteEventResponse;
 import com.capstone.inventoryservice.domain.service.UserFavoriteEventService;
+import com.capstone.inventoryservice.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -17,6 +18,14 @@ import org.springframework.web.bind.annotation.*;
 public class UserFavoriteEventController {
 
     private final UserFavoriteEventService userFavoriteEventService;
+    private final JwtUtil jwtUtil;
+
+    @GetMapping("/check")
+    public ResponseEntity<BaseResponse<Boolean>> checkFavorite(@RequestParam Long eventId) {
+        Long userId = jwtUtil.getDataFromAuth().userId();
+        boolean result = userFavoriteEventService.isFavorite(userId, eventId);
+        return ResponseEntity.ok(BaseResponse.ok(result));
+    }
 
     @PostMapping
     public ResponseEntity<BaseResponse<UserFavoriteEventResponse>> addToFavorites(

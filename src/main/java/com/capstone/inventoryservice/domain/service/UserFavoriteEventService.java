@@ -75,6 +75,11 @@ public class UserFavoriteEventService {
         return true;
     }
 
+    @Transactional(readOnly = true)
+    public boolean isFavorite(Long userId, Long eventId) {
+        return userFavoriteEventRepository.existsByUserIdAndEventId(userId, eventId);
+    }
+
     private UserFavoriteEventResponse mapToDTO(UserFavoriteEvent entity) {
         Event event = entity.getEvent();
         return UserFavoriteEventResponse.builder()
@@ -86,6 +91,10 @@ public class UserFavoriteEventService {
                 .eventStartDate(event.getEarliestStart())
                 .eventEndDate(event.getLatestEnd())
                 .likedAt(entity.getLikedAt())
+                .eventBannerImage(event.getBannerImage())
+                .eventVenue(event.getVenue())
+                .eventAddress(event.getAddress())
+                .minPrice(event.getMinPrice())
                 .build();
     }
 }
