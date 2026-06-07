@@ -142,4 +142,11 @@ public class ReviewService {
                 .map(result -> (String) result.get("secure_url"))
                 .toList();
     }
+
+    @Transactional
+    public List<ReviewResponse> getReviewsByEventId(Long eventId) {
+        return reviewRepository.findByEventIdOrderByCreatedAtDesc(eventId).stream()
+                .map(reviewMapper::mapToResponse)
+                .toList();
+    }
 }

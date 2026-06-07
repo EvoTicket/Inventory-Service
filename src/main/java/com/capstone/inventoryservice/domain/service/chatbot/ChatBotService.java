@@ -3,34 +3,21 @@ package com.capstone.inventoryservice.domain.service.chatbot;
 import com.capstone.inventoryservice.exception.AppException;
 import com.capstone.inventoryservice.exception.ErrorCode;
 import com.capstone.inventoryservice.security.JwtUtil;
-import com.google.genai.Client;
-import com.google.genai.types.GenerateContentConfig;
-import com.google.genai.types.GenerateContentResponse;
-import com.google.genai.types.ThinkingConfig;
-import com.google.genai.types.ThinkingLevel;
+import com.capstone.inventoryservice.model.entity.ChatConversation;
+import com.capstone.inventoryservice.model.repository.ChatConversationRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.content.Media;
-import org.springframework.ai.document.Document;
 import org.springframework.ai.google.genai.GoogleGenAiChatOptions;
-import org.springframework.ai.reader.tika.TikaDocumentReader;
-import org.springframework.ai.transformer.splitter.TextSplitter;
-import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.core.io.InputStreamResource;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
-import org.springframework.util.MimeType;
-import org.springframework.util.MimeTypeUtils;
-import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -41,62 +28,126 @@ public class ChatBotService {
     private final JwtUtil jwtUtil;
     private final VectorStore vectorStore;
     private final ChatMemory chatMemory;
+    private final ChatConversationRepository chatConversationRepository;
 
     public ChatBotService(
             ChatClient chatClient,
             EvoTicketTools evoTicketTools,
             JwtUtil jwtUtil,
             VectorStore vectorStore,
-            ChatMemory chatMemory
+            ChatMemory chatMemory,
+            ChatConversationRepository chatConversationRepository
     ) {
         this.chatClient = chatClient;
         this.evoTicketTools = evoTicketTools;
         this.jwtUtil = jwtUtil;
         this.vectorStore = vectorStore;
         this.chatMemory = chatMemory;
+        this.chatConversationRepository = chatConversationRepository;
     }
 
-    public record FileData(MimeType mimeType, Resource resource) {}
+    public List<ChatConversation> listConversations(Long userId) {
+        if (userId == null) {
+            throw new AppException(ErrorCode.UNAUTHORIZED, "User not authenticated");
+        }
+        return chatConversationRepository.findByUserIdOrderByUpdatedAtDesc(userId);
+    }
 
-    public Flux<String> chatStream(String question, List<MultipartFile> files, boolean useRag) {
-        Long userId = jwtUtil.getDataFromAuth().userId();
+    public ChatConversation createConversation(Long userId) {
+        if (userId == null) {
+            throw new AppException(ErrorCode.UNAUTHORIZED, "User not authenticated");
+        }
+        ChatConversation conversation = ChatConversation.builder()
+                .id(UUID.randomUUID().toString())
+                .userId(userId)
+                .title("Cuộc trò chuyện mới")
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+        return chatConversationRepository.save(conversation);
+    }
 
-        List<FileData> filesData = convertResources(files);
-        List<Media> mediaList = filesData.stream()
-                .map(fd -> new Media(fd.mimeType(), fd.resource()))
-                .toList();
-        List<Resource> resourceList = filesData.stream()
-                .map(FileData::resource)
-                .toList();
-
-        if (useRag && !resourceList.isEmpty()) {
-            CompletableFuture.runAsync(() -> ingestResources(resourceList));
+    public void deleteConversation(Long userId, String conversationId) {
+        if (userId == null) {
+            throw new AppException(ErrorCode.UNAUTHORIZED, "User not authenticated");
+        }
+        ChatConversation conversation = chatConversationRepository.findById(conversationId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy cuộc trò chuyện"));
+        if (!conversation.getUserId().equals(userId)) {
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền xóa cuộc trò chuyện này");
         }
 
-        return callToolCallingClientStream(userId, question, mediaList);
+        chatConversationRepository.deleteMessagesByConversationId(conversationId);
+        chatMemory.clear(conversationId);
+        chatConversationRepository.delete(conversation);
     }
 
-    private Flux<String> callToolCallingClientStream(Long userId, String question, List<Media> mediaList) {
+    public ChatConversation renameConversation(Long userId, String conversationId, String newTitle) {
+        if (userId == null) {
+            throw new AppException(ErrorCode.UNAUTHORIZED, "User not authenticated");
+        }
+        if (newTitle == null || newTitle.trim().isEmpty()) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Tiêu đề không được để trống");
+        }
+        ChatConversation conversation = chatConversationRepository.findById(conversationId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy cuộc trò chuyện"));
+        if (!conversation.getUserId().equals(userId)) {
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền đổi tên cuộc trò chuyện này");
+        }
+        conversation.setTitle(newTitle);
+        conversation.setUpdatedAt(LocalDateTime.now());
+        return chatConversationRepository.save(conversation);
+    }
+
+    private void updateConversationMetadata(String conversationId, String firstQuestion, Long userId) {
+        if (conversationId == null || conversationId.trim().isEmpty() || "anonymous".equals(conversationId)) return;
+
+        Optional<ChatConversation> convOpt = chatConversationRepository.findById(conversationId);
+        if (convOpt.isPresent()) {
+            ChatConversation conversation = convOpt.get();
+            if (!conversation.getUserId().equals(userId)) {
+                throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền truy cập cuộc trò chuyện này");
+            }
+
+            if ("Cuộc trò chuyện mới".equals(conversation.getTitle()) && firstQuestion != null && !firstQuestion.trim().isEmpty()) {
+                String cleanTitle = firstQuestion.trim();
+                if (cleanTitle.length() > 50) {
+                    cleanTitle = cleanTitle.substring(0, 47) + "...";
+                }
+                conversation.setTitle(cleanTitle);
+            }
+
+            conversation.setUpdatedAt(LocalDateTime.now());
+            chatConversationRepository.save(conversation);
+        }
+    }
+
+    public Flux<String> chatStream(String conversationId, String question) {
+        Long userId = jwtUtil.getDataFromAuth().userId();
+
+        updateConversationMetadata(conversationId, question, userId);
+
+        return callToolCallingClientStream(userId, conversationId, question);
+    }
+
+    private Flux<String> callToolCallingClientStream(Long userId, String conversationId, String question) {
         try {
             String fullQuestion = (userId != null)
                     ? question + "\n\n[Thông tin phiên: userId=" + userId + ", dùng giá trị này khi gọi tool cần userId]"
                     : question;
 
-            Object conversationId = userId != null ? userId : "anonymous";
+            Object chatConvId = (conversationId != null && !conversationId.trim().isEmpty())
+                    ? conversationId
+                    : (userId != null ? userId.toString() : "anonymous");
 
-            String model = mediaList != null && !mediaList.isEmpty() ? "gemini-3-flash-preview" : "gemini-3.1-flash-lite";
+            String model = "gemini-3.1-flash-lite";
 
             return chatClient.prompt()
                     .options(GoogleGenAiChatOptions.builder()
                             .model(model)
                             .build())
-                    .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, conversationId))
-                    .user(u -> {
-                        u.text(fullQuestion);
-                        if (mediaList != null && !mediaList.isEmpty()) {
-                            mediaList.forEach(u::media);
-                        }
-                    })
+                    .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatConvId))
+                    .user(u -> u.text(fullQuestion))
                     .tools(evoTicketTools)
                     .stream()
                     .content();
@@ -106,45 +157,32 @@ public class ChatBotService {
         }
     }
 
-    public String chat(String question, List<MultipartFile> files, boolean useRag) {
+    public String chat(String conversationId, String question) {
         Long userId = jwtUtil.getDataFromAuth().userId();
 
-        List<FileData> filesData = convertResources(files);
-        List<Media> mediaList = filesData.stream()
-                .map(fd -> new Media(fd.mimeType(), fd.resource()))
-                .toList();
-        List<Resource> resourceList = filesData.stream()
-                .map(FileData::resource)
-                .toList();
+        updateConversationMetadata(conversationId, question, userId);
 
-        if (useRag && !resourceList.isEmpty()) {
-            CompletableFuture.runAsync(() -> ingestResources(resourceList));
-        }
-
-        return callToolCallingClient(userId, question, mediaList);
+        return callToolCallingClient(userId, conversationId, question);
     }
 
-    private String callToolCallingClient(Long userId, String question, List<Media> mediaList) {
+    private String callToolCallingClient(Long userId, String conversationId, String question) {
         try {
             String fullQuestion = (userId != null)
                     ? question + "\n\n[Thông tin phiên: userId=" + userId + ", dùng giá trị này khi gọi tool cần userId]"
                     : question;
 
-            Object conversationId = userId != null ? userId : "anonymous";
+            Object chatConvId = (conversationId != null && !conversationId.trim().isEmpty())
+                    ? conversationId
+                    : (userId != null ? userId.toString() : "anonymous");
 
-            String model = mediaList != null && !mediaList.isEmpty() ? "gemini-3.5-flash" : "gemini-3.1-flash-lite";
+            String model = "gemini-3.1-flash-lite";
 
             return chatClient.prompt()
                     .options(GoogleGenAiChatOptions.builder()
                             .model(model)
                             .build())
-                    .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, conversationId))
-                    .user(u -> {
-                        u.text(fullQuestion);
-                        if (mediaList != null && !mediaList.isEmpty()) {
-                            mediaList.forEach(u::media);
-                        }
-                    })
+                    .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, chatConvId))
+                    .user(u -> u.text(fullQuestion))
                     .tools(evoTicketTools)
                     .call()
                     .content();
@@ -154,85 +192,41 @@ public class ChatBotService {
         }
     }
 
-    private List<FileData> convertResources(List<MultipartFile> files) {
-        if (files == null || files.isEmpty()) return List.of();
-
-        List<FileData> result = new ArrayList<>();
-
-        for (MultipartFile file : files) {
-            if (file.isEmpty()) continue;
-
-            try {
-                MimeType mime = Optional.ofNullable(file.getContentType())
-                        .map(MimeTypeUtils::parseMimeType)
-                        .orElse(MimeTypeUtils.APPLICATION_OCTET_STREAM);
-
-                Resource resource = new InputStreamResource(file.getInputStream()) {
-                    @Override
-                    public String getFilename() {
-                        return file.getOriginalFilename();
-                    }
-                };
-
-                result.add(new FileData(mime, resource));
-
-            } catch (Exception e) {
-                log.error("[ChatBot] Lỗi đọc file: {}", file.getOriginalFilename(), e);
-            }
-        }
-
-        return result;
-    }
-
-    private void ingestResources(List<Resource> resources) {
-        try {
-            TextSplitter splitter = new TokenTextSplitter();
-
-            List<CompletableFuture<List<Document>>> futures = resources.stream()
-                    .map(resource -> CompletableFuture.supplyAsync(() -> {
-                        try {
-                            TikaDocumentReader reader = new TikaDocumentReader(resource);
-                            List<Document> docs = splitter.split(reader.read());
-                            docs.forEach(d -> d.getMetadata().put("filename", resource.getFilename()));
-                            return docs;
-                        } catch (Exception e) {
-                            log.error("[ChatBot] Lỗi khi đọc file {}: {}", resource.getFilename(), e.getMessage(), e);
-                            return List.<Document>of();
-                        }
-                    }))
-                    .toList();
-
-            List<Document> allDocuments = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                    .thenApply(v -> futures.stream()
-                            .flatMap(f -> f.join().stream())
-                            .toList())
-                    .join();
-
-            if (!allDocuments.isEmpty()) {
-                vectorStore.accept(allDocuments);
-                log.info("[ChatBot] Đã ingest {} document chunks từ {} file(s)",
-                        allDocuments.size(), resources.size());
-            }
-        } catch (Exception ex) {
-            log.error("[ChatBot] Lỗi khi ingest file: {}", ex.getMessage(), ex);
-        }
-    }
-
-    public List<Message> getChatMessages() {
+    public List<Message> getChatMessages(String conversationId) {
         Long userId = jwtUtil.getDataFromAuth().userId();
         if (userId == null) {
             throw new AppException(ErrorCode.UNAUTHORIZED, "User not authenticated");
         }
 
-        return chatMemory.get(userId.toString());
+        String targetId = conversationId;
+        if (targetId == null || targetId.trim().isEmpty()) {
+            targetId = userId.toString();
+        } else {
+            Optional<ChatConversation> convOpt = chatConversationRepository.findById(targetId);
+            if (convOpt.isPresent() && !convOpt.get().getUserId().equals(userId)) {
+                throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền truy cập cuộc trò chuyện này");
+            }
+        }
+
+        return chatMemory.get(targetId);
     }
 
-    public void clearChatHistory() {
+    public void clearChatHistory(String conversationId) {
         Long userId = jwtUtil.getDataFromAuth().userId();
         if (userId == null) {
             throw new AppException(ErrorCode.UNAUTHORIZED, "User not authenticated");
         }
 
-        chatMemory.clear(userId.toString());
+        String targetId = conversationId;
+        if (targetId == null || targetId.trim().isEmpty()) {
+            targetId = userId.toString();
+        } else {
+            Optional<ChatConversation> convOpt = chatConversationRepository.findById(targetId);
+            if (convOpt.isPresent() && !convOpt.get().getUserId().equals(userId)) {
+                throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền xóa cuộc trò chuyện này");
+            }
+        }
+
+        chatMemory.clear(targetId);
     }
 }

@@ -17,4 +17,8 @@ public class UserFavoriteEventResponse {
     private LocalDateTime eventStartDate;
     private LocalDateTime eventEndDate;
     private LocalDateTime likedAt;
+    private String eventBannerImage;
+    private String eventVenue;
+    private String eventAddress;
+    private java.math.BigDecimal minPrice;
 }

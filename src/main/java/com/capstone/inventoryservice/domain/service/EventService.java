@@ -16,7 +16,6 @@ import com.capstone.inventoryservice.domain.dto.request.UpdateDraftStep2Request;
 import com.capstone.inventoryservice.domain.dto.request.UpdateDraftStep3Request;
 import com.capstone.inventoryservice.domain.dto.request.UpdateDraftStep4Request;
 import com.capstone.inventoryservice.domain.dto.response.*;
-import com.capstone.inventoryservice.domain.mapper.ReviewMapper;
 import com.capstone.inventoryservice.model.entity.Event;
 import com.capstone.inventoryservice.model.entity.EventView;
 import com.capstone.inventoryservice.model.entity.Showtime;
@@ -67,7 +66,6 @@ public class EventService {
     private final TicketTypeMapper ticketTypeMapper;
     private final UploadService uploadService;
     private final ApplicationEventPublisher eventPublisher;
-    private final ReviewMapper reviewMapper;
 
     @Transactional(readOnly = true)
     public BasePageResponse<ListEventResponse> getEvents(EventFilterRequest filter) {
@@ -740,12 +738,6 @@ public class EventService {
                     .sorted(Comparator.comparing(ShowtimeResponse::getStartDatetime))
                     .toList();
         }
-        List<ReviewResponse> reviewDTOs = null;
-        if (event.getReviews() != null) {
-            reviewDTOs = event.getReviews().stream()
-                    .map(reviewMapper::mapToResponse)
-                    .toList();
-        }
 
         if(event.getOrganizerId() == null) {
             throw new AppException(ErrorCode.RESOURCE_NOT_FOUND, "OrganizerId is null");
@@ -800,7 +792,6 @@ public class EventService {
                 .entryGateInstruction(event.getEntryGateInstruction())
                 .reconciliationNote(event.getReconciliationNote())
                 .showtimes(showtimeDTOs)
-                .reviews(reviewDTOs)
                 .build();
     }
 

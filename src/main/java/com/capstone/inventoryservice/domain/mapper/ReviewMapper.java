@@ -31,7 +31,7 @@ public class ReviewMapper {
                 .userAvatarUrl(avatarUrl)
                 .rating(review.getRating())
                 .comment(review.getComment())
-                .images(review.getImages())
+                .images(review.getImages() != null ? new java.util.LinkedHashSet<>(review.getImages()) : null)
                 .createdAt(review.getCreatedAt())
                 .updatedAt(review.getUpdatedAt())
                 .build();

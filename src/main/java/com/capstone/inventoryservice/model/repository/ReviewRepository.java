@@ -15,6 +15,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     List<Review> findByEventIdOrderByCreatedAtAsc(Long eventId);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"images"})
+    List<Review> findByEventIdOrderByCreatedAtDesc(Long eventId);
+
     List<Review> findByUserId(Long userId);
 
     Optional<Review> findByIdAndUserId(Long id, Long userId);
