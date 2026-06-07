@@ -76,8 +76,7 @@ public class ChatBotService {
         if (!conversation.getUserId().equals(userId)) {
             throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền xóa cuộc trò chuyện này");
         }
-
-        chatConversationRepository.deleteMessagesByConversationId(conversationId);
+        
         chatMemory.clear(conversationId);
         chatConversationRepository.delete(conversation);
     }
