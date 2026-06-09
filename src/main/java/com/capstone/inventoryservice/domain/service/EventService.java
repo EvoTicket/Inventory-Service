@@ -31,6 +31,7 @@ import com.capstone.inventoryservice.security.JwtUtil;
 import com.capstone.inventoryservice.domain.specification.EventSpecification;
 import com.capstone.inventoryservice.domain.util.EventUtil;
 import com.capstone.inventoryservice.domain.util.LocationUtil;
+import com.capstone.inventoryservice.producer.RedisStreamProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -66,6 +67,7 @@ public class EventService {
     private final TicketTypeMapper ticketTypeMapper;
     private final UploadService uploadService;
     private final ApplicationEventPublisher eventPublisher;
+    private final RedisStreamProducer redisStreamProducer;
 
     @Transactional(readOnly = true)
     public BasePageResponse<ListEventResponse> getEvents(EventFilterRequest filter) {
@@ -555,6 +557,22 @@ public class EventService {
         Event event = eventUtil.getEventOrElseThrow(eventId);
         event.setApprovalStatus(approvalStatus);
         Event savedEvent = eventRepository.save(event);
+
+        if (savedEvent.getApprovalStatus() == EventApprovalStatus.PUBLISHED) {
+            if (savedEvent.getTotalSeats() != null && savedEvent.getTotalSeats() > 200) {
+                try {
+                    Map<String, Object> hotEvent = new HashMap<>();
+                    hotEvent.put("eventId", savedEvent.getId());
+                    hotEvent.put("eventName", savedEvent.getEventName());
+                    hotEvent.put("totalSeats", savedEvent.getTotalSeats());
+                    hotEvent.put("thumbnailImage", savedEvent.getThumbnailImage());
+                    redisStreamProducer.sendMessage("hot-event-created", hotEvent);
+                } catch (Exception e) {
+                    log.error("Failed to send hot-event-created message to Redis Stream", e);
+                }
+            }
+        }
+
         return convertToDTO(savedEvent);
     }
 
